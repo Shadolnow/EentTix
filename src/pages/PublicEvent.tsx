@@ -124,6 +124,15 @@ const PublicEvent = () => {
 
         {/* Event Details */}
         <Card className="mb-8">
+          {event.image_url && (
+            <div className="w-full h-64 md:h-80 overflow-hidden rounded-t-lg">
+              <img 
+                src={event.image_url} 
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           <CardHeader>
             <CardTitle className="text-3xl">{event.title}</CardTitle>
             <CardDescription className="flex items-center gap-2 text-lg">
@@ -134,7 +143,14 @@ const PublicEvent = () => {
           <CardContent className="space-y-4">
             <p className="flex items-center gap-2">
               <MapPin className="w-5 h-5" />
-              {event.venue}
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                {event.venue}
+              </a>
             </p>
             {event.description && (
               <p className="text-muted-foreground">{event.description}</p>

@@ -23,6 +23,20 @@ const CreateEvent = () => {
     isFree: true,
     ticketPrice: '0'
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +44,25 @@ const CreateEvent = () => {
 
     setIsLoading(true);
     try {
+      let imageUrl = null;
+
+      // Upload image if selected
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('event-images')
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('event-images')
+          .getPublicUrl(fileName);
+        
+        imageUrl = publicUrl;
+      }
+
       const { error } = await (supabase as any).from('events').insert({
         user_id: user.id,
         title: formData.title,
@@ -38,7 +71,8 @@ const CreateEvent = () => {
         event_date: formData.eventDate,
         promotion_text: formData.promotionText,
         is_free: formData.isFree,
-        ticket_price: formData.isFree ? 0 : parseFloat(formData.ticketPrice)
+        ticket_price: formData.isFree ? 0 : parseFloat(formData.ticketPrice),
+        image_url: imageUrl
       });
 
       if (error) throw error;
@@ -76,13 +110,35 @@ const CreateEvent = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="venue">Venue</Label>
+                <Label htmlFor="venue">Venue Address</Label>
                 <Input
                   id="venue"
                   value={formData.venue}
                   onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                  placeholder="Full address for Google Maps"
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  This address will be used to generate a location QR code on tickets
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image">Event Image</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="w-full h-48 object-cover rounded-lg border-2 border-border"
+                    />
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="eventDate">Event Date</Label>

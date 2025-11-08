@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { TicketCard } from '@/components/TicketCard';
-import { ArrowLeft, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, Download, Share2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TicketViewer = () => {
@@ -77,6 +77,14 @@ const TicketViewer = () => {
     toast.info('Screenshot this page to save your ticket!');
   };
 
+  const handleWhatsAppShare = () => {
+    if (!ticket) return;
+    const url = window.location.href;
+    const message = `🎫 My ticket for ${ticket.events.title}\n\nView ticket: ${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   if (!ticket) return null;
 
   return (
@@ -97,14 +105,18 @@ const TicketViewer = () => {
         <div className="space-y-6">
           <TicketCard ticket={ticket} />
 
-          <div className="flex gap-4">
-            <Button variant="neon" className="flex-1" onClick={handleShare}>
-              <Share2 className="w-4 h-4 mr-2" />
-              Share Ticket
+          <div className="flex gap-3 flex-wrap">
+            <Button variant="default" className="flex-1 min-w-[140px]" onClick={handleWhatsAppShare}>
+              <Send className="w-4 h-4 mr-2" />
+              WhatsApp
             </Button>
-            <Button variant="outline" className="flex-1" onClick={handleDownload}>
+            <Button variant="outline" className="flex-1 min-w-[140px]" onClick={handleShare}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            <Button variant="outline" className="flex-1 min-w-[140px]" onClick={handleDownload}>
               <Download className="w-4 h-4 mr-2" />
-              Save Image
+              Download
             </Button>
           </div>
 

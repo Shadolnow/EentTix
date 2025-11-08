@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TicketCard } from '@/components/TicketCard';
+import { AttendeeList } from '@/components/AttendeeList';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Ticket as TicketIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Ticket as TicketIcon, Users } from 'lucide-react';
 import { z } from 'zod';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const attendeeSchema = z.object({
   name: z.string().trim().min(1, { message: 'Name is required' }).max(100),
@@ -243,15 +245,34 @@ const TicketManagement = () => {
             </Button>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {tickets.map((ticket) => (
-              <Link key={ticket.id} to={`/ticket/${ticket.id}`}>
-                <div className="transition-transform hover:scale-105">
-                  <TicketCard ticket={ticket} compact />
-                </div>
-              </Link>
-            ))}
-          </div>
+          <Tabs defaultValue="tickets" className="space-y-6">
+            <TabsList className="grid w-full md:w-auto grid-cols-2">
+              <TabsTrigger value="tickets">
+                <TicketIcon className="w-4 h-4 mr-2" />
+                Tickets
+              </TabsTrigger>
+              <TabsTrigger value="attendees">
+                <Users className="w-4 h-4 mr-2" />
+                Attendees
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="tickets">
+              <div className="grid md:grid-cols-2 gap-6">
+                {tickets.map((ticket) => (
+                  <Link key={ticket.id} to={`/ticket/${ticket.id}`}>
+                    <div className="transition-transform hover:scale-105">
+                      <TicketCard ticket={ticket} compact />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="attendees">
+              <AttendeeList tickets={tickets} eventTitle={event.title} />
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>

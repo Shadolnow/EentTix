@@ -3,7 +3,6 @@ import { Card } from '@/components/ui/card';
 import { Calendar, MapPin, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { LocationQR } from './LocationQR';
-import { Button } from './ui/button';
 
 interface TicketCardProps {
   ticket: {
@@ -73,23 +72,16 @@ export const TicketCard = ({ ticket, compact = false }: TicketCardProps) => {
             <Calendar className="w-4 h-4 text-primary" />
             <span>{format(new Date(ticket.events.event_date), 'PPP p')}</span>
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="w-4 h-4 text-accent" />
-              <span className="flex-1">{ticket.events.venue}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <LocationQR address={ticket.events.venue} size={60} />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ticket.events.venue)}`, '_blank')}
-                className="text-xs"
-              >
-                <MapPin className="w-3 h-3 mr-1" />
-                Open in Maps
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="w-4 h-4 text-accent" />
+            <a 
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ticket.events.venue)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 text-primary hover:underline"
+            >
+              {ticket.events.venue}
+            </a>
           </div>
         </div>
 
@@ -106,24 +98,45 @@ export const TicketCard = ({ ticket, compact = false }: TicketCardProps) => {
           </div>
         )}
 
-        {/* QR Code section */}
+        {/* QR Codes section */}
         <div className="flex flex-col items-center gap-4 pt-4 border-t border-primary/20">
-          <div className="relative p-4 rounded-xl bg-background border-2 border-primary/30 shadow-neon-cyan">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-xl" />
-            <QRCodeSVG
-              value={ticket.ticket_code}
-              size={compact ? 120 : 160}
-              level="H"
-              includeMargin
-              className="relative"
-            />
-          </div>
-          
-          <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground font-mono">TICKET CODE</p>
-            <p className="text-sm font-bold tracking-wider text-primary font-mono">
-              {ticket.ticket_code}
-            </p>
+          <div className="flex gap-6 justify-center items-start flex-wrap">
+            {/* Ticket QR Code */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative p-4 rounded-xl bg-background border-2 border-primary/30 shadow-neon-cyan">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-xl" />
+                <QRCodeSVG
+                  value={ticket.ticket_code}
+                  size={compact ? 100 : 140}
+                  level="H"
+                  includeMargin={false}
+                  className="relative"
+                />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-xs text-muted-foreground font-mono">TICKET CODE</p>
+                <p className="text-xs font-bold tracking-wider text-primary font-mono">
+                  {ticket.ticket_code}
+                </p>
+              </div>
+            </div>
+
+            {/* Location QR Code */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative">
+                <LocationQR 
+                  address={ticket.events.venue} 
+                  size={compact ? 100 : 140}
+                  showLabel={false}
+                />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-xs text-muted-foreground font-mono flex items-center gap-1 justify-center">
+                  <MapPin className="w-3 h-3" />
+                  VENUE LOCATION
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
