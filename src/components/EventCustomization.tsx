@@ -41,14 +41,38 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // Limit total gallery images to 10
+    const maxGalleryImages = 10;
+    if (galleryImages.length + files.length > maxGalleryImages) {
+      toast.error(`Maximum ${maxGalleryImages} gallery images allowed`);
+      return;
+    }
+
+    // Validate file size and type
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxSize) {
+        toast.error(`File "${file.name}" is too large. Maximum size is 5MB`);
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`File "${file.name}" has invalid type. Only JPEG, PNG, GIF, and WebP images are allowed`);
+        return;
+      }
+    }
+
     setUploading(true);
     try {
       const uploadedUrls: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}/gallery/${Date.now()}-${i}.${fileExt}`;
+        // Use random UUID for filename to prevent enumeration
+        const fileExt = file.name.split('.').pop()?.toLowerCase();
+        const fileName = `${userId}/gallery/${crypto.randomUUID()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('event-images')

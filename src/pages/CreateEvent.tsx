@@ -29,6 +29,20 @@ const CreateEvent = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error('File too large. Maximum size is 5MB');
+        return;
+      }
+
+      // Validate MIME type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed');
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -48,8 +62,9 @@ const CreateEvent = () => {
 
       // Upload image if selected
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        // Use random UUID for filename to prevent enumeration
+        const fileExt = imageFile.name.split('.').pop()?.toLowerCase();
+        const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('event-images')
           .upload(fileName, imageFile);
