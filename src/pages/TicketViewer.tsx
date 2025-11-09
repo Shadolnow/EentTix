@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { TicketCard } from '@/components/TicketCard';
 import { SocialShare } from '@/components/SocialShare';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import html2canvas from 'html2canvas';
 
 const TicketViewer = () => {
   const { ticketId } = useParams();
@@ -56,8 +57,47 @@ const TicketViewer = () => {
     };
   }, [ticketId, navigate]);
 
-  const handleDownload = () => {
-    toast.info('Screenshot this page to save your ticket!');
+  const handleDownload = async () => {
+    const ticketElement = document.getElementById('ticket-card');
+    if (!ticketElement) return;
+
+    try {
+      toast.info('Generating ticket image...');
+      const canvas = await html2canvas(ticketElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `ticket-${ticket.ticket_code}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      toast.success('Ticket downloaded!');
+    } catch (error) {
+      toast.error('Failed to download ticket. Try taking a screenshot instead.');
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const text = `My ticket for ${ticket.events.title}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Ticket: ${ticket.events.title}`,
+          text,
+          url
+        });
+      } catch (error) {
+        // User cancelled
+      }
+    } else {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      toast.success('Link copied to clipboard!');
+    }
   };
 
   if (!ticket) return null;
@@ -78,7 +118,9 @@ const TicketViewer = () => {
         </Button>
 
         <div className="space-y-6">
-          <TicketCard ticket={ticket} />
+          <div id="ticket-card">
+            <TicketCard ticket={ticket} />
+          </div>
 
           <Card className="border-2 border-primary/20">
             <CardHeader>
@@ -88,14 +130,24 @@ const TicketViewer = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={handleDownload}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download Ticket
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleDownload}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleShare}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share
+                </Button>
+              </div>
               
               <SocialShare 
                 url={window.location.href}

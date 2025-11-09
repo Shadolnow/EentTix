@@ -51,7 +51,7 @@ export const SocialShare = ({ url, title, description, compact = false }: Social
     {
       name: 'WhatsApp',
       icon: MessageCircle,
-      url: `https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`,
+      url: `https://web.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`,
       color: 'hover:text-green-500'
     },
     {

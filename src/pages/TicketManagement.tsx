@@ -161,8 +161,10 @@ const TicketManagement = () => {
             <h1 className="text-4xl font-bold text-gradient-cyber mb-2">
               {event.title}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground flex items-center gap-4">
               Event Management Dashboard
+              <span className="text-sm">•</span>
+              <span className="text-primary font-semibold">{tickets.length} Tickets Created</span>
             </p>
           </div>
 
