@@ -64,7 +64,10 @@ const Events = () => {
                 </Button>
                 <Button 
                   variant="default"
-                  onClick={() => navigate('/public-events')}
+                  onClick={() => {
+                    const url = `${PUBLIC_BASE_URL}/public-events`;
+                    window.open(url, '_blank', 'noopener');
+                  }}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   View Public Page

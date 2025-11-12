@@ -175,12 +175,17 @@ const Index = () => {
                 >
                   Copy Link
                 </Button>
-                <Link to="/public-events" className="flex-1">
-                  <Button variant="default" className="w-full">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Page
-                  </Button>
-                </Link>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => {
+                    const url = `${PUBLIC_BASE_URL}/public-events`;
+                    window.open(url, '_blank', 'noopener');
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Page
+                </Button>
               </div>
               {/* Download controls: SVG, PNG, PDF */}
               <div className="flex gap-2 w-full mt-2">
