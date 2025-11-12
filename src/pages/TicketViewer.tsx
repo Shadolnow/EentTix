@@ -58,7 +58,7 @@ const TicketViewer = () => {
     };
   }, [ticketId, navigate]);
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: 'png' | 'jpg' = 'png') => {
     const ticketElement = document.getElementById('ticket-card');
     if (!ticketElement) return;
 
@@ -70,7 +70,7 @@ const TicketViewer = () => {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const canvas = await html2canvas(ticketElement, {
-        backgroundColor: '#0a0f1c',
+        backgroundColor: format === 'jpg' ? '#0a0f1c' : null,
         scale: 3,
         logging: false,
         useCORS: true,
@@ -78,6 +78,7 @@ const TicketViewer = () => {
       });
       
       // Convert to blob for better quality
+      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
       canvas.toBlob((blob) => {
         if (!blob) {
           throw new Error('Failed to generate image');
@@ -85,15 +86,15 @@ const TicketViewer = () => {
         
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `ticket-${ticket.ticket_code}.png`;
+        link.download = `ticket-${ticket.ticket_code}.${format}`;
         link.href = url;
         link.click();
         
         // Cleanup
         setTimeout(() => URL.revokeObjectURL(url), 100);
         
-        toast.success('Ticket downloaded successfully!');
-      }, 'image/png', 1.0);
+        toast.success(`Ticket downloaded as ${format.toUpperCase()}!`);
+      }, mimeType, 1.0);
       
     } catch (error) {
       console.error('Download error:', error);
@@ -153,43 +154,61 @@ const TicketViewer = () => {
             <TicketCard ticket={ticket} />
           </div>
 
-          <Card className="border-2 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="w-5 h-5" />
-                Save & Share
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Download Options */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-card via-card to-card/80">
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold mb-1">Download Your Ticket</h3>
+                <p className="text-sm text-muted-foreground">Save as image for offline access</p>
+              </div>
+              
               <div className="grid grid-cols-2 gap-3">
                 <Button 
                   variant="outline" 
-                  className="w-full" 
-                  onClick={handleDownload}
+                  className="w-full border-primary/30 hover:bg-primary/10" 
+                  onClick={() => handleDownload('png')}
                   disabled={downloading}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  {downloading ? 'Generating...' : 'Download'}
+                  {downloading ? 'Generating...' : 'PNG'}
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full" 
-                  onClick={handleShare}
+                  className="w-full border-primary/30 hover:bg-primary/10" 
+                  onClick={() => handleDownload('jpg')}
+                  disabled={downloading}
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
+                  <Download className="w-4 h-4 mr-2" />
+                  {downloading ? 'Generating...' : 'JPG'}
                 </Button>
               </div>
-              
-              <p className="text-xs text-center text-muted-foreground">
-                💡 Tip: You can also take a screenshot to save your ticket
-              </p>
+            </CardContent>
+          </Card>
+
+          {/* Share Section */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-card via-card to-card/80">
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold mb-1">Share Your Ticket</h3>
+                <p className="text-sm text-muted-foreground">Let everyone know you're attending!</p>
+              </div>
               
               <SocialShare 
                 url={window.location.href}
                 title={`Ticket for ${ticket.events.title}`}
                 description={`Check out my ticket for ${ticket.events.title}!`}
               />
+
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-primary/30 hover:bg-primary/10" 
+                  onClick={handleShare}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share Link
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
