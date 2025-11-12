@@ -208,6 +208,27 @@ const Dashboard = () => {
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
+      // Get current role
+      const currentRole = userRoles.find((r) => r.user_id === userId)?.role || 'user';
+      const isDemotingAdmin = currentRole === 'admin' && newRole !== 'admin';
+
+      // Check if this is the last admin
+      if (isDemotingAdmin) {
+        const { count } = await supabase
+          .from('user_roles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'admin');
+
+        if (count && count <= 1) {
+          toast({
+            variant: 'destructive',
+            title: 'Cannot remove last admin',
+            description: 'You must promote another admin before removing this role.',
+          });
+          return;
+        }
+      }
+
       // Remove existing roles
       await supabase.from('user_roles').delete().eq('user_id', userId);
 
@@ -238,6 +259,24 @@ const Dashboard = () => {
 
   const handleDeleteUser = async (userId: string, email: string) => {
     try {
+      // Check if deleting the last admin
+      const targetUserRole = userRoles.find((r) => r.user_id === userId);
+      if (targetUserRole?.role === 'admin') {
+        const { count } = await supabase
+          .from('user_roles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'admin');
+
+        if (count && count <= 1) {
+          toast({
+            variant: 'destructive',
+            title: 'Cannot delete last admin',
+            description: 'You must create another admin before deleting this account.',
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase.functions.invoke('admin-manage-users', {
         body: { action: 'delete', userId }
       });

@@ -70,8 +70,8 @@ const PublicEvent = () => {
       
       setLoading(true);
       
-      // Generate ticket code
-      const ticketCode = `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      // Generate cryptographically secure ticket code
+      const ticketCode = `${crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()}-${crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()}`;
       
       const { data: ticket, error } = await supabase
         .from('tickets')

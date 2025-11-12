@@ -107,8 +107,8 @@ const TicketManagement = () => {
 
     setIsLoading(true);
     try {
-      // Generate unique ticket code
-      const ticketCode = `${eventId?.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      // Generate cryptographically secure ticket code
+      const ticketCode = `${crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()}-${crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()}`;
 
       const { data: ticketData, error } = await (supabase as any).from('tickets').insert({
         event_id: eventId,
