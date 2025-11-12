@@ -65,10 +65,11 @@ const AdminEvents = () => {
       setIsAdmin(true);
       await loadEvents();
     } catch (error: any) {
+      console.error('Admin check error:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message,
+        description: getUserFriendlyError(error),
       });
       navigate('/');
     } finally {
@@ -87,10 +88,11 @@ const AdminEvents = () => {
 
       setEvents(data || []);
     } catch (error: any) {
+      console.error('Load events error:', error);
       toast({
         variant: 'destructive',
         title: 'Error loading events',
-        description: error.message,
+        description: getUserFriendlyError(error),
       });
     }
   };
@@ -111,10 +113,11 @@ const AdminEvents = () => {
 
       await loadEvents();
     } catch (error: any) {
+      console.error('Delete event error:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message,
+        description: getUserFriendlyError(error),
       });
     }
   };
