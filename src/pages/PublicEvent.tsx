@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SocialShare } from '@/components/SocialShare';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Calendar, MapPin, Download, ArrowLeft, DollarSign, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Download, ArrowLeft, DollarSign, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -522,6 +522,45 @@ const PublicEvent = () => {
 
                 <div>
                   <h3 className="text-sm font-semibold mb-3">Share Ticket</h3>
+                  <Button 
+                    size="lg"
+                    className="w-full mb-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                    onClick={async () => {
+                      const ticketUrl = `${window.location.origin}/ticket/${claimedTicket.id}`;
+                      const text = `🎫 My ticket for ${event.title}`;
+                      
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: `Ticket: ${event.title}`,
+                            text,
+                            url: ticketUrl
+                          });
+                        } catch (error: any) {
+                          if (error.name !== 'AbortError') {
+                            await navigator.clipboard.writeText(ticketUrl);
+                            toast.success('Link copied to clipboard!');
+                          }
+                        }
+                      } else {
+                        await navigator.clipboard.writeText(ticketUrl);
+                        toast.success('Link copied to clipboard!');
+                      }
+                    }}
+                  >
+                    <Share2 className="w-5 h-5 mr-2" />
+                    Share Ticket
+                  </Button>
+                  
+                  <div className="relative mb-3">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">or share via</span>
+                    </div>
+                  </div>
+                  
                   <SocialShare 
                     url={`${window.location.origin}/ticket/${claimedTicket.id}`}
                     title={`My ticket for ${event.title}`}

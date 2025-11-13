@@ -8,11 +8,9 @@ type ClaimBody = {
   phone: string;
 };
 
-// Supabase CLI does not allow function secrets starting with "SUPABASE_".
-// Use non-reserved env names (e.g., SB_URL and SB_SERVICE_ROLE_KEY).
 const supabase = createClient(
-  Deno.env.get('SB_URL')!,
-  Deno.env.get('SB_SERVICE_ROLE_KEY')!
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 const respond = (status: number, body: Record<string, unknown>) =>
