@@ -443,22 +443,6 @@ const PublicEvent = () => {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Sending OTP...' : 'Verify & Claim Ticket'}
-                  </Button>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  <div className="text-center space-y-2">
-                    <h3 className="font-semibold text-lg">Verify Email Address</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Enter the 6-digit code sent to {formData.email}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-center">
-                    <InputOTP
-                      maxLength={6}
-                      value={otp}
                       onChange={(value) => setOtp(value)}
                     >
                       <InputOTPGroup>
@@ -505,40 +489,40 @@ const PublicEvent = () => {
                   </p>
                 </div>
               )}
-            </CardContent>
+          </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Ticket</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <TicketCard ticket={claimedTicket} />
+      ) : (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Ticket</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <TicketCard ticket={claimedTicket} />
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleDownload} className="flex-1">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleDownload} className="flex-1">
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
 
-                <SocialShare
-                  url={`${window.location.origin}/ticket/${claimedTicket.id}`}
-                  title={`Ticket for ${event.title}`}
-                  description="Check out my event ticket!"
-                  compact
-                />
+            <SocialShare
+              url={`${window.location.origin}/ticket/${claimedTicket.id}`}
+              title={`Ticket for ${event.title}`}
+              description="Check out my event ticket!"
+              compact
+            />
 
-                <p className="text-sm text-muted-foreground text-center">
-                  Please present this ticket at entry
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            <p className="text-sm text-muted-foreground text-center">
+              Please present this ticket at entry
+            </p>
+          </CardContent>
+        </Card>
       </div>
+        )}
     </div>
+    </div >
   );
 };
 
