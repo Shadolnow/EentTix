@@ -179,7 +179,7 @@ const AdminEvents = () => {
                         {event.capacity ? ` / ${event.capacity}` : ''}
                       </TableCell>
                       <TableCell>
-                        {event.is_free ? 'Free' : `$${event.ticket_price}`}
+                        {event.is_free ? 'Free' : `₹${event.ticket_price}`}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
