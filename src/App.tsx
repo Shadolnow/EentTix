@@ -31,6 +31,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/create-event" element={<CreateEvent />} />
             <Route path="/events" element={<Events />} />
             <Route path="/event/:eventId/tickets" element={<TicketManagement />} />
