@@ -77,22 +77,23 @@ const PublicEvent = () => {
         }
       }
 
-      // Send real OTP via Supabase Auth (Email)
-      const { error } = await supabase.auth.signInWithOtp({
-        email: validated.email,
-        options: {
-          shouldCreateUser: true,
-        }
+      // Send OTP via custom API endpoint
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: validated.email })
       });
 
-      if (error) {
-        toast.error(error.message);
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || 'Failed to send OTP');
         setLoading(false);
         return;
       }
 
       setShowOtpInput(true);
-      toast.success(`OTP sent to ${validated.email}`);
+      toast.success(`Verification code sent to ${validated.email}`);
 
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -108,20 +109,22 @@ const PublicEvent = () => {
   const verifyAndClaim = async () => {
     setLoading(true);
     try {
-      // Verify OTP (Email)
-      const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
-        email: formData.email,
-        token: otp,
-        type: 'email',
+      // Verify OTP via custom API endpoint
+      const verifyResponse = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp })
       });
 
-      if (verifyError) {
-        toast.error(verifyError.message || "Invalid OTP");
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        toast.error(verifyResult.error || "Invalid OTP");
         setLoading(false);
         return;
       }
 
-      if (!session) {
+      if (!verifyResult.success) {
         toast.error("Verification failed. Please try again.");
         setLoading(false);
         return;
@@ -473,10 +476,6 @@ const PublicEvent = () => {
                     <p className="text-sm text-muted-foreground">
                       Enter the 6-digit code sent to {formData.email}
                     </p>
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 text-xs text-yellow-600 dark:text-yellow-400">
-                      <p className="font-semibold">⚠️ Important:</p>
-                      <p>If your email contains a "Log In" link, please look for the <strong>6-digit code</strong> in the email subject or body. Do not click the link.</p>
-                    </div>
                   </div>
 
                   <div className="flex justify-center">
@@ -519,8 +518,13 @@ const PublicEvent = () => {
                       className="text-primary hover:underline disabled:opacity-50"
                       onClick={async () => {
                         toast.info("Resending code...");
-                        const { error } = await supabase.auth.signInWithOtp({ email: formData.email });
-                        if (error) toast.error(error.message);
+                        const response = await fetch('/api/send-otp', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: formData.email })
+                        });
+                        const result = await response.json();
+                        if (!response.ok) toast.error(result.error || "Failed to resend");
                         else toast.success("Code resent to email!");
                       }}
                     >
