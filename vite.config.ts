@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api': {
+        target: 'https://eent-tix.vercel.app',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
   },
   plugins: [react()].filter(Boolean),
   resolve: {
