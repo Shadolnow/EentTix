@@ -16,7 +16,7 @@ interface User {
   id: string;
   email: string;
   created_at: string;
-  role?: string;
+  role: 'admin' | 'moderator' | 'user';
 }
 
 interface Stats {
@@ -134,14 +134,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
     try {
       // Check if role exists
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (existingRole) {
         // Update existing role
@@ -155,7 +155,7 @@ const AdminDashboard = () => {
         // Insert new role
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role: newRole });
+          .insert([{ user_id: userId, role: newRole }]);
 
         if (error) throw error;
       }
@@ -293,7 +293,7 @@ const AdminDashboard = () => {
                         <TableCell>
                           <Select
                             value={u.role}
-                            onValueChange={(value) => handleRoleChange(u.id, value)}
+                            onValueChange={(value) => handleRoleChange(u.id, value as 'admin' | 'moderator' | 'user')}
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />

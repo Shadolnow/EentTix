@@ -43,7 +43,7 @@ const Index = () => {
             {user ? (
               <>
                 {isAdmin && (
-                  <Link to="/dashboard">
+                  <Link to="/admin">
                     <Button variant="outline" className="border-primary/50 hover:border-primary">
                       <Shield className="w-4 h-4 mr-2" />
                       Admin

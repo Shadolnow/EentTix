@@ -16,6 +16,7 @@ import PublicEvent from "./pages/PublicEvent";
 import PublicEvents from "./pages/PublicEvents";
 import Dashboard from "./pages/Dashboard";
 import AdminEvents from "./pages/AdminEvents";
+import AdminDashboard from "./pages/AdminDashboard";
 import EventCustomizationPage from "./pages/EventCustomizationPage";
 import NotFound from "./pages/NotFound";
 import AuthRoute from "@/components/RouteGuards/AuthRoute";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/scan" element={<AuthRoute><Scan /></AuthRoute>} />
             <Route path="/attendance" element={<AuthRoute><Attendance /></AuthRoute>} />
             <Route path="/dashboard" element={<AuthRoute><Dashboard /></AuthRoute>} />
+            <Route path="/admin" element={<AuthRoute><AdminDashboard /></AuthRoute>} />
             <Route path="/admin/events" element={<AuthRoute><AdminEvents /></AuthRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
