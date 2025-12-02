@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Users, Calendar, Ticket, TrendingUp, Shield, Mail, ArrowLeft, Loader2, Send } from 'lucide-react';
+import { Users, Calendar, Ticket, TrendingUp, Shield, Mail, ArrowLeft, Loader2, Send, Trash2, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface User {
@@ -39,6 +40,11 @@ const AdminDashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [updateMessage, setUpdateMessage] = useState('');
   const [sendingUpdate, setSendingUpdate] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [processingBulk, setProcessingBulk] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -111,6 +117,9 @@ const AdminDashboard = () => {
 
       // Load users list
       await loadUsers();
+      
+      // Load tickets list
+      await loadTickets();
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
@@ -184,6 +193,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          events (
+            title,
+            event_date,
+            venue
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) setTickets(data);
+    } catch (error) {
+      console.error('Error loading tickets:', error);
+      toast.error('Failed to load tickets');
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
   const handleSendEventUpdate = async () => {
     if (!selectedEvent || !updateMessage.trim()) {
       toast.error('Please select an event and enter a message');
@@ -209,6 +243,109 @@ const AdminDashboard = () => {
       toast.error('Failed to send event update: ' + error.message);
     } finally {
       setSendingUpdate(false);
+    }
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    if (selectedUsers.length === 0) {
+      toast.error('Please select users to delete');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)?`)) {
+      return;
+    }
+
+    setProcessingBulk(true);
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const userId of selectedUsers) {
+        const { error } = await supabase.functions.invoke('admin-manage-users', {
+          body: { action: 'delete', userId },
+        });
+
+        if (error) {
+          errorCount++;
+          console.error(`Failed to delete user ${userId}:`, error);
+        } else {
+          successCount++;
+        }
+      }
+
+      toast.success(`Deleted ${successCount} user(s)${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      setSelectedUsers([]);
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error bulk deleting users:', error);
+      toast.error('Failed to delete users');
+    } finally {
+      setProcessingBulk(false);
+    }
+  };
+
+  const handleBulkValidateTickets = async () => {
+    if (selectedTickets.length === 0) {
+      toast.error('Please select tickets to validate');
+      return;
+    }
+
+    setProcessingBulk(true);
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const ticketId of selectedTickets) {
+        const { error } = await supabase
+          .from('tickets')
+          .update({ is_validated: true, validated_at: new Date().toISOString() })
+          .eq('id', ticketId);
+
+        if (error) {
+          errorCount++;
+          console.error(`Failed to validate ticket ${ticketId}:`, error);
+        } else {
+          successCount++;
+        }
+      }
+
+      toast.success(`Validated ${successCount} ticket(s)${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      setSelectedTickets([]);
+      await loadTickets();
+    } catch (error: any) {
+      console.error('Error bulk validating tickets:', error);
+      toast.error('Failed to validate tickets');
+    } finally {
+      setProcessingBulk(false);
+    }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleTicketSelection = (ticketId: string) => {
+    setSelectedTickets(prev =>
+      prev.includes(ticketId) ? prev.filter(id => id !== ticketId) : [...prev, ticketId]
+    );
+  };
+
+  const toggleAllUsers = () => {
+    if (selectedUsers.length === users.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map(u => u.id));
+    }
+  };
+
+  const toggleAllTickets = () => {
+    if (selectedTickets.length === tickets.length) {
+      setSelectedTickets([]);
+    } else {
+      setSelectedTickets(tickets.map(t => t.id));
     }
   };
 
@@ -300,6 +437,7 @@ const AdminDashboard = () => {
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList>
             <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="tickets">Ticket Management</TabsTrigger>
             <TabsTrigger value="events">Event Overview</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
@@ -307,15 +445,45 @@ const AdminDashboard = () => {
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  Manage user accounts and permissions
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>
+                      Manage user accounts and permissions
+                    </CardDescription>
+                  </div>
+                  {selectedUsers.length > 0 && (
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">{selectedUsers.length} selected</Badge>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDeleteUsers}
+                        disabled={processingBulk}
+                      >
+                        {processingBulk ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Selected
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedUsers.length === users.length && users.length > 0}
+                          onCheckedChange={toggleAllUsers}
+                        />
+                      </TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Joined</TableHead>
@@ -325,6 +493,12 @@ const AdminDashboard = () => {
                   <TableBody>
                     {users.map((u) => (
                       <TableRow key={u.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUsers.includes(u.id)}
+                            onCheckedChange={() => toggleUserSelection(u.id)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{u.email}</TableCell>
                         <TableCell>
                           <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
@@ -353,6 +527,91 @@ const AdminDashboard = () => {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tickets" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Ticket Management</CardTitle>
+                    <CardDescription>
+                      Bulk validate tickets and manage attendees
+                    </CardDescription>
+                  </div>
+                  {selectedTickets.length > 0 && (
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">{selectedTickets.length} selected</Badge>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleBulkValidateTickets}
+                        disabled={processingBulk}
+                      >
+                        {processingBulk ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Validate Selected
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingTickets ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedTickets.length === tickets.length && tickets.length > 0}
+                            onCheckedChange={toggleAllTickets}
+                          />
+                        </TableHead>
+                        <TableHead>Attendee</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tickets.map((ticket) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedTickets.includes(ticket.id)}
+                              onCheckedChange={() => toggleTicketSelection(ticket.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{ticket.attendee_name}</TableCell>
+                          <TableCell>{ticket.events?.title || 'Unknown Event'}</TableCell>
+                          <TableCell>{ticket.attendee_email}</TableCell>
+                          <TableCell>
+                            {ticket.is_validated ? (
+                              <Badge variant="default" className="bg-green-500">Validated</Badge>
+                            ) : (
+                              <Badge variant="secondary">Pending</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(ticket.created_at).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
