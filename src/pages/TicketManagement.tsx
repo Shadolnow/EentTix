@@ -291,9 +291,11 @@ const TicketManagement = () => {
                   userId={user!.id}
                   initialData={{
                     galleryImages: event.gallery_images,
+                    videos: event.videos,
                     faq: event.faq,
                     schedule: event.schedule,
-                    additionalInfo: event.additional_info
+                    additionalInfo: event.additional_info,
+                    socialLinks: event.social_links
                   }}
                 />
               </TabsContent>

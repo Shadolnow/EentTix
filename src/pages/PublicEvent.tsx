@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SocialShare } from '@/components/SocialShare';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Calendar, MapPin, Download, ArrowLeft, IndianRupee, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Download, ArrowLeft, IndianRupee, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle, Video, Instagram, Facebook, Twitter, Linkedin, Youtube, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -314,6 +314,33 @@ const PublicEvent = () => {
           </Card>
         )}
 
+        {/* Videos */}
+        {event.videos && event.videos.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5" />
+                Event Videos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6">
+                {event.videos.map((url: string, index: number) => (
+                  <div key={index} className="aspect-video rounded-lg overflow-hidden border-2 border-border">
+                    <iframe
+                      src={url}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Event video ${index + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Schedule */}
         {event.schedule && event.schedule.length > 0 && (
           <Card className="mb-8">
@@ -375,6 +402,88 @@ const PublicEvent = () => {
               <p className="whitespace-pre-wrap text-muted-foreground">
                 {event.additional_info}
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Social Links */}
+        {event.social_links && Object.values(event.social_links).some(Boolean) && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Connect With Us
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {event.social_links.instagram && (
+                  <a 
+                    href={event.social_links.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Instagram className="w-5 h-5" />
+                    Instagram
+                  </a>
+                )}
+                {event.social_links.facebook && (
+                  <a 
+                    href={event.social_links.facebook} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Facebook className="w-5 h-5" />
+                    Facebook
+                  </a>
+                )}
+                {event.social_links.twitter && (
+                  <a 
+                    href={event.social_links.twitter} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Twitter className="w-5 h-5" />
+                    Twitter/X
+                  </a>
+                )}
+                {event.social_links.linkedin && (
+                  <a 
+                    href={event.social_links.linkedin} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-700 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                    LinkedIn
+                  </a>
+                )}
+                {event.social_links.youtube && (
+                  <a 
+                    href={event.social_links.youtube} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Youtube className="w-5 h-5" />
+                    YouTube
+                  </a>
+                )}
+                {event.social_links.website && (
+                  <a 
+                    href={event.social_links.website} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground border border-border hover:bg-accent transition-colors"
+                  >
+                    <Globe className="w-5 h-5" />
+                    Website
+                  </a>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

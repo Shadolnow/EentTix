@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, Video, Instagram, Facebook, Twitter, Globe, Linkedin, Youtube } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -19,37 +19,49 @@ interface ScheduleItem {
   description: string;
 }
 
+interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  linkedin?: string;
+  youtube?: string;
+  website?: string;
+}
+
 interface EventCustomizationProps {
   eventId: string;
   userId: string;
   initialData?: {
     galleryImages?: string[];
+    videos?: string[];
     faq?: FAQ[];
     schedule?: ScheduleItem[];
     additionalInfo?: string;
+    socialLinks?: SocialLinks;
   };
 }
 
 export const EventCustomization = ({ eventId, userId, initialData }: EventCustomizationProps) => {
   const [galleryImages, setGalleryImages] = useState<string[]>(initialData?.galleryImages || []);
+  const [videos, setVideos] = useState<string[]>(initialData?.videos || []);
   const [faq, setFaq] = useState<FAQ[]>(initialData?.faq || []);
   const [schedule, setSchedule] = useState<ScheduleItem[]>(initialData?.schedule || []);
   const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialData?.socialLinks || {});
   const [uploading, setUploading] = useState(false);
+  const [newVideoUrl, setNewVideoUrl] = useState('');
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Limit total gallery images to 10
     const maxGalleryImages = 10;
     if (galleryImages.length + files.length > maxGalleryImages) {
       toast.error(`Maximum ${maxGalleryImages} gallery images allowed`);
       return;
     }
 
-    // Validate file size and type
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     
     for (let i = 0; i < files.length; i++) {
@@ -70,7 +82,6 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        // Use random UUID for filename to prevent enumeration
         const fileExt = file.name.split('.').pop()?.toLowerCase();
         const fileName = `${userId}/gallery/${crypto.randomUUID()}.${fileExt}`;
         
@@ -100,6 +111,55 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
     setGalleryImages(galleryImages.filter((_, i) => i !== index));
   };
 
+  // Video handling
+  const extractVideoEmbed = (url: string): string | null => {
+    // YouTube
+    const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (youtubeMatch) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+    
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeoMatch) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+
+    return null;
+  };
+
+  const addVideo = () => {
+    if (!newVideoUrl.trim()) {
+      toast.error('Please enter a video URL');
+      return;
+    }
+
+    if (videos.length >= 5) {
+      toast.error('Maximum 5 videos allowed');
+      return;
+    }
+
+    const embedUrl = extractVideoEmbed(newVideoUrl);
+    if (!embedUrl) {
+      toast.error('Please enter a valid YouTube or Vimeo URL');
+      return;
+    }
+
+    if (videos.includes(embedUrl)) {
+      toast.error('This video is already added');
+      return;
+    }
+
+    setVideos([...videos, embedUrl]);
+    setNewVideoUrl('');
+    toast.success('Video added!');
+  };
+
+  const removeVideo = (index: number) => {
+    setVideos(videos.filter((_, i) => i !== index));
+  };
+
+  // FAQ handling
   const addFAQ = () => {
     setFaq([...faq, { question: '', answer: '' }]);
   };
@@ -114,6 +174,7 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
     setFaq(faq.filter((_, i) => i !== index));
   };
 
+  // Schedule handling
   const addScheduleItem = () => {
     setSchedule([...schedule, { time: '', title: '', description: '' }]);
   };
@@ -128,15 +189,22 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
     setSchedule(schedule.filter((_, i) => i !== index));
   };
 
+  // Social links handling
+  const updateSocialLink = (platform: keyof SocialLinks, value: string) => {
+    setSocialLinks({ ...socialLinks, [platform]: value });
+  };
+
   const handleSave = async () => {
     try {
       const { error } = await supabase
         .from('events')
         .update({
           gallery_images: galleryImages,
+          videos: videos,
           faq: faq.filter(f => f.question && f.answer) as any,
           schedule: schedule.filter(s => s.time && s.title) as any,
-          additional_info: additionalInfo
+          additional_info: additionalInfo,
+          social_links: socialLinks as any
         })
         .eq('id', eventId);
 
@@ -152,11 +220,14 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
       {/* Gallery */}
       <Card>
         <CardHeader>
-          <CardTitle>Event Gallery</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Event Gallery
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="gallery">Upload Images</Label>
+            <Label htmlFor="gallery">Upload Images (max 10)</Label>
             <Input
               id="gallery"
               type="file"
@@ -164,6 +235,7 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
               multiple
               onChange={handleImageUpload}
               disabled={uploading}
+              className="mt-1"
             />
           </div>
           
@@ -188,6 +260,126 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Videos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5" />
+            Event Videos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Paste YouTube or Vimeo URL"
+              value={newVideoUrl}
+              onChange={(e) => setNewVideoUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={addVideo} variant="outline">
+              <Plus className="w-4 h-4 mr-2" />
+              Add
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Add up to 5 videos from YouTube or Vimeo to showcase your event
+          </p>
+          
+          {videos.length > 0 && (
+            <div className="grid gap-4">
+              {videos.map((url, index) => (
+                <div key={index} className="relative">
+                  <div className="aspect-video rounded-lg overflow-hidden border-2 border-border">
+                    <iframe
+                      src={url}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Event video ${index + 1}`}
+                    />
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => removeVideo(index)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Social Media Links */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="w-5 h-5" />
+            Social Media & Links
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            <div className="flex items-center gap-3">
+              <Instagram className="w-5 h-5 text-pink-500" />
+              <Input
+                placeholder="Instagram URL (e.g., https://instagram.com/yourevent)"
+                value={socialLinks.instagram || ''}
+                onChange={(e) => updateSocialLink('instagram', e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Facebook className="w-5 h-5 text-blue-600" />
+              <Input
+                placeholder="Facebook URL (e.g., https://facebook.com/yourevent)"
+                value={socialLinks.facebook || ''}
+                onChange={(e) => updateSocialLink('facebook', e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Twitter className="w-5 h-5 text-sky-500" />
+              <Input
+                placeholder="Twitter/X URL (e.g., https://twitter.com/yourevent)"
+                value={socialLinks.twitter || ''}
+                onChange={(e) => updateSocialLink('twitter', e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Linkedin className="w-5 h-5 text-blue-700" />
+              <Input
+                placeholder="LinkedIn URL"
+                value={socialLinks.linkedin || ''}
+                onChange={(e) => updateSocialLink('linkedin', e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Youtube className="w-5 h-5 text-red-600" />
+              <Input
+                placeholder="YouTube Channel URL"
+                value={socialLinks.youtube || ''}
+                onChange={(e) => updateSocialLink('youtube', e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Globe className="w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="Website URL"
+                value={socialLinks.website || ''}
+                onChange={(e) => updateSocialLink('website', e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -230,6 +422,11 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
               </div>
             </div>
           ))}
+          {faq.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No FAQ added yet. Click "Add FAQ" to add questions and answers.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -277,6 +474,11 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
               </div>
             </div>
           ))}
+          {schedule.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No schedule items added yet. Click "Add Schedule Item" to create your event timeline.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -287,7 +489,7 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
         </CardHeader>
         <CardContent>
           <Textarea
-            placeholder="Add any additional information about the event..."
+            placeholder="Add any additional information about the event (dress code, parking info, special instructions, etc.)"
             value={additionalInfo}
             onChange={(e) => setAdditionalInfo(e.target.value)}
             rows={5}
