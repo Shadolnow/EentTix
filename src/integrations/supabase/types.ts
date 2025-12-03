@@ -68,6 +68,7 @@ export type Database = {
           is_free: boolean
           promotion_text: string | null
           schedule: Json | null
+          social_links: Json | null
           sponsors: Json | null
           tags: string[] | null
           ticket_price: number | null
@@ -76,6 +77,7 @@ export type Database = {
           updated_at: string
           user_id: string
           venue: string
+          videos: string[] | null
         }
         Insert: {
           additional_info?: string | null
@@ -92,6 +94,7 @@ export type Database = {
           is_free?: boolean
           promotion_text?: string | null
           schedule?: Json | null
+          social_links?: Json | null
           sponsors?: Json | null
           tags?: string[] | null
           ticket_price?: number | null
@@ -100,6 +103,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           venue: string
+          videos?: string[] | null
         }
         Update: {
           additional_info?: string | null
@@ -116,6 +120,7 @@ export type Database = {
           is_free?: boolean
           promotion_text?: string | null
           schedule?: Json | null
+          social_links?: Json | null
           sponsors?: Json | null
           tags?: string[] | null
           ticket_price?: number | null
@@ -124,6 +129,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           venue?: string
+          videos?: string[] | null
         }
         Relationships: []
       }
