@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getUserFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/components/AuthProvider';
 import { z } from 'zod';
+import { Mail, CheckCircle2 } from 'lucide-react';
 
 const authSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +20,7 @@ const authSchema = z.object({
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [emailVerificationPending, setEmailVerificationPending] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accountType, setAccountType] = useState<'individual' | 'company'>('individual');
@@ -133,11 +135,8 @@ const Auth = () => {
             });
             navigate('/dashboard');
           } else {
-            toast({ 
-              title: 'Account created!', 
-              description: 'Please check your email to verify your account before signing in.' 
-            });
-            setIsLogin(true); // Switch to login mode
+            // Email verification required - show pending state
+            setEmailVerificationPending(true);
           }
         }
       }
@@ -164,6 +163,60 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Email verification pending screen
+  if (emailVerificationPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md p-8 space-y-6 text-center">
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <Mail className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Check your email</h1>
+            <p className="text-muted-foreground">
+              We've sent a verification link to <span className="font-medium text-foreground">{email}</span>
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-2">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>Click the link in your email to verify your account</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>After verification, you can sign in with your credentials</span>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setEmailVerificationPending(false);
+                setIsLogin(true);
+              }}
+            >
+              Back to Sign In
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Didn't receive the email? Check your spam folder or{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailVerificationPending(false);
+                  setIsLogin(false);
+                }}
+                className="text-primary hover:underline"
+              >
+                try again
+              </button>
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
