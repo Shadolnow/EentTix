@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { TicketCard } from '@/components/TicketCard';
+import { TierSelector } from '@/components/TierSelector';
 import { downloadICS } from '@/utils/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -19,6 +20,12 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+
+interface SelectedTier {
+  id: string;
+  name: string;
+  price: number;
+}
 
 const claimSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -35,6 +42,8 @@ const PublicEvent = () => {
   const [loading, setLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
+  const [selectedTier, setSelectedTier] = useState<SelectedTier | null>(null);
+  const [hasTiers, setHasTiers] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -53,6 +62,16 @@ const PublicEvent = () => {
       }
 
       setEvent(data);
+      
+      // Check if event has tiers
+      const { data: tiers } = await supabase
+        .from('ticket_tiers')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('is_active', true)
+        .limit(1);
+      
+      setHasTiers(tiers && tiers.length > 0);
     };
 
     fetchEvent();
@@ -140,14 +159,15 @@ const PublicEvent = () => {
           attendee_name: formData.name,
           attendee_phone: formData.phone,
           attendee_email: formData.email.toLowerCase(),
-          ticket_code: ticketCode
+          ticket_code: ticketCode,
+          tier_id: selectedTier?.id || null
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setClaimedTicket({ ...ticket, events: event });
+      setClaimedTicket({ ...ticket, events: event, tier_name: selectedTier?.name });
       toast.success('Ticket claimed successfully!');
 
       // Send Email via Vercel Function
@@ -569,6 +589,26 @@ const PublicEvent = () => {
             <CardContent>
               {!showOtpInput ? (
                 <form onSubmit={handleClaim} className="space-y-4">
+                  {/* Tier Selector */}
+                  {hasTiers && (
+                    <TierSelector
+                      eventId={eventId!}
+                      isFreeEvent={event.is_free}
+                      selectedTierId={selectedTier?.id || null}
+                      onSelect={(tier) => setSelectedTier(tier ? { id: tier.id, name: tier.name, price: tier.price } : null)}
+                    />
+                  )}
+                  
+                  {/* Show selected tier info */}
+                  {selectedTier && (
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium">
+                        Selected: {selectedTier.name} 
+                        {selectedTier.price > 0 && ` - ₹${selectedTier.price.toLocaleString()}`}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div>
                     <Label htmlFor="name">Full Name *</Label>
                     <Input
@@ -606,8 +646,12 @@ const PublicEvent = () => {
                       maxLength={20}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Sending OTP...' : 'Verify & Claim Ticket'}
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loading || (hasTiers && !selectedTier)}
+                  >
+                    {loading ? 'Sending OTP...' : hasTiers && !selectedTier ? 'Select a Ticket Type' : 'Verify & Claim Ticket'}
                   </Button>
                 </form>
               ) : (

@@ -10,6 +10,7 @@ type ClaimBody = {
   eventId: string;
   name: string;
   phone: string;
+  tierId?: string;
 };
 
 serve(async (req) => {
@@ -26,7 +27,7 @@ serve(async (req) => {
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
     const body = (await req.json()) as ClaimBody;
-    const { eventId, name, phone } = body;
+    const { eventId, name, phone, tierId } = body;
 
     // Basic input validation
     if (!eventId || !name || !phone) {
@@ -54,6 +55,23 @@ serve(async (req) => {
         JSON.stringify({ error: 'sold_out', message: 'This event is sold out.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Check tier availability if tier is specified
+    if (tierId) {
+      const { data: tierAvailable, error: tierError } = await supabase
+        .rpc('check_tier_availability', { tier_id_input: tierId });
+      
+      if (tierError) {
+        console.error('Tier availability check failed', tierError);
+      }
+      
+      if (tierAvailable === false) {
+        return new Response(
+          JSON.stringify({ error: 'tier_sold_out', message: 'This ticket tier is sold out.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Rate limiting by IP (simple sliding window)
@@ -99,8 +117,9 @@ serve(async (req) => {
         attendee_phone: normalizedPhone,
         attendee_email: generatedEmail,
         ticket_code: ticketCode,
+        tier_id: tierId || null,
       })
-      .select('*, events(*)')
+      .select('*, events(*), ticket_tiers(*)')
       .single();
 
     if (insertError || !ticket) {

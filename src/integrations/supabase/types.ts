@@ -246,6 +246,59 @@ export type Database = {
           },
         ]
       }
+      ticket_tiers: {
+        Row: {
+          capacity: number | null
+          created_at: string
+          currency: string
+          description: string | null
+          event_id: string
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          sort_order: number
+          tickets_sold: number
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          event_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          sort_order?: number
+          tickets_sold?: number
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          sort_order?: number
+          tickets_sold?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_tiers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           attendee_email: string
@@ -256,6 +309,7 @@ export type Database = {
           id: string
           is_validated: boolean
           ticket_code: string
+          tier_id: string | null
           validated_at: string | null
         }
         Insert: {
@@ -267,6 +321,7 @@ export type Database = {
           id?: string
           is_validated?: boolean
           ticket_code: string
+          tier_id?: string | null
           validated_at?: string | null
         }
         Update: {
@@ -278,6 +333,7 @@ export type Database = {
           id?: string
           is_validated?: boolean
           ticket_code?: string
+          tier_id?: string | null
           validated_at?: string | null
         }
         Relationships: [
@@ -286,6 +342,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_tiers"
             referencedColumns: ["id"]
           },
         ]
@@ -318,6 +381,10 @@ export type Database = {
     Functions: {
       check_ticket_availability: {
         Args: { event_id_input: string }
+        Returns: boolean
+      }
+      check_tier_availability: {
+        Args: { tier_id_input: string }
         Returns: boolean
       }
       get_ticket_by_code: {

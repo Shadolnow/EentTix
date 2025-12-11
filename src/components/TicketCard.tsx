@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { Card } from '@/components/ui/card';
-import { Calendar, MapPin, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, MapPin, Sparkles, Ticket } from 'lucide-react';
 import { format } from 'date-fns';
 import { LocationQR } from './LocationQR';
 
@@ -12,6 +13,12 @@ interface TicketCardProps {
     attendee_email: string;
     attendee_phone?: string;
     is_validated: boolean;
+    tier_id?: string;
+    tier_name?: string;
+    ticket_tiers?: {
+      name: string;
+      price: number;
+    };
     events: {
       title: string;
       venue: string;
@@ -57,6 +64,13 @@ export const TicketCard = ({ ticket, compact = false }: TicketCardProps) => {
             <p className="text-sm text-muted-foreground">{ticket.attendee_name}</p>
             {ticket.attendee_phone && (
               <p className="text-xs text-muted-foreground mt-1">📱 {ticket.attendee_phone}</p>
+            )}
+            {/* Tier badge */}
+            {(ticket.tier_name || ticket.ticket_tiers?.name) && (
+              <Badge variant="secondary" className="mt-2">
+                <Ticket className="w-3 h-3 mr-1" />
+                {ticket.tier_name || ticket.ticket_tiers?.name}
+              </Badge>
             )}
           </div>
           {ticket.is_validated && (

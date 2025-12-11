@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Upload, Video, Instagram, Facebook, Twitter, Globe, Linkedin, Youtube, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { TicketTiersManager } from './TicketTiersManager';
 
 interface FAQ {
   question: string;
@@ -37,6 +38,7 @@ interface Sponsor {
 interface EventCustomizationProps {
   eventId: string;
   userId: string;
+  isFreeEvent?: boolean;
   initialData?: {
     galleryImages?: string[];
     videos?: string[];
@@ -48,7 +50,7 @@ interface EventCustomizationProps {
   };
 }
 
-export const EventCustomization = ({ eventId, userId, initialData }: EventCustomizationProps) => {
+export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initialData }: EventCustomizationProps) => {
   const [galleryImages, setGalleryImages] = useState<string[]>(initialData?.galleryImages || []);
   const [videos, setVideos] = useState<string[]>(initialData?.videos || []);
   const [faq, setFaq] = useState<FAQ[]>(initialData?.faq || []);
@@ -287,6 +289,9 @@ export const EventCustomization = ({ eventId, userId, initialData }: EventCustom
 
   return (
     <div className="space-y-6">
+      {/* Ticket Tiers */}
+      <TicketTiersManager eventId={eventId} isFreeEvent={isFreeEvent} />
+
       {/* Gallery */}
       <Card>
         <CardHeader>
