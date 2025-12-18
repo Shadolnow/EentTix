@@ -17,6 +17,16 @@ interface EventUpdateRequest {
   updateType: 'time' | 'venue' | 'general';
 }
 
+// HTML escape function to prevent injection
+const escapeHtml = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,20 +34,68 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // ========== AUTHORIZATION CHECK ==========
+    // Verify the authenticated user owns this event or is an admin
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      console.error('No authorization token provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No token provided' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    console.log('Authenticated user:', user.id);
+    
     const { eventId, updateMessage, updateType }: EventUpdateRequest = await req.json();
 
-    console.log('Sending event update notification for event:', eventId);
-
-    // Get event details
+    // Get event details and check ownership
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, event_date, venue')
+      .select('title, event_date, venue, user_id')
       .eq('id', eventId)
       .single();
 
     if (eventError || !event) {
-      throw new Error('Event not found');
+      console.error('Event not found:', eventId);
+      return new Response(
+        JSON.stringify({ error: 'Event not found' }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
+
+    // Check if user is admin
+    const { data: isAdmin } = await supabase.rpc('has_role', { 
+      _user_id: user.id, 
+      _role: 'admin' 
+    });
+
+    // Verify user owns the event or is admin
+    if (event.user_id !== user.id && !isAdmin) {
+      console.error('Forbidden - User', user.id, 'does not own event', eventId, 'and is not admin');
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - You do not have permission to send updates for this event' }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    console.log('Authorization passed for event:', eventId);
+    // ========== END AUTHORIZATION CHECK ==========
+
+    console.log('Sending event update notification for event:', eventId);
 
     // Get all tickets for this event
     const { data: tickets, error: ticketsError } = await supabase
@@ -63,12 +121,19 @@ const handler = async (req: Request): Promise<Response> => {
       general: { emoji: '📢', title: 'Event Update' },
     }[updateType];
 
+    // Escape user-provided content to prevent HTML injection
+    const safeEventTitle = escapeHtml(event.title);
+    const safeUpdateMessage = escapeHtml(updateMessage);
+    const safeVenue = escapeHtml(event.venue);
+
     // Send email to all ticket holders
-    const emailPromises = tickets.map((ticket) =>
-      resend.emails.send({
+    const emailPromises = tickets.map((ticket) => {
+      const safeAttendeeName = escapeHtml(ticket.attendee_name);
+      
+      return resend.emails.send({
         from: "EventTix <onboarding@resend.dev>",
         to: [ticket.attendee_email],
-        subject: `${updateInfo.emoji} ${updateInfo.title}: ${event.title}`,
+        subject: `${updateInfo.emoji} ${updateInfo.title}: ${safeEventTitle}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -127,12 +192,12 @@ const handler = async (req: Request): Promise<Response> => {
                 <h1>${updateInfo.emoji} ${updateInfo.title}</h1>
               </div>
               <div class="content">
-                <p>Hello ${ticket.attendee_name},</p>
-                <p>There's an important update regarding <strong>${event.title}</strong>.</p>
+                <p>Hello ${safeAttendeeName},</p>
+                <p>There's an important update regarding <strong>${safeEventTitle}</strong>.</p>
                 
                 <div class="alert-box">
                   <p style="margin: 0;"><strong>Update:</strong></p>
-                  <p style="margin: 10px 0 0 0;">${updateMessage}</p>
+                  <p style="margin: 10px 0 0 0;">${safeUpdateMessage}</p>
                 </div>
 
                 <div class="event-info">
@@ -145,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
                     hour: '2-digit',
                     minute: '2-digit'
                   })}</p>
-                  <p><strong>📍 Venue:</strong> ${event.venue}</p>
+                  <p><strong>📍 Venue:</strong> ${safeVenue}</p>
                 </div>
 
                 <p>Your ticket is still valid and no action is required from you. We'll see you at the event!</p>
@@ -157,8 +222,8 @@ const handler = async (req: Request): Promise<Response> => {
             </body>
           </html>
         `,
-      })
-    );
+      });
+    });
 
     const results = await Promise.allSettled(emailPromises);
     const successful = results.filter(r => r.status === 'fulfilled').length;
