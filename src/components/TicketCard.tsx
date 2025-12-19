@@ -88,7 +88,7 @@ export const TicketCard = ({ ticket, compact = false }: TicketCardProps) => {
           </div>
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="w-4 h-4 text-accent" />
-            <a 
+            <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ticket.events.venue)}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -132,14 +132,18 @@ export const TicketCard = ({ ticket, compact = false }: TicketCardProps) => {
                 <p className="text-xs font-bold tracking-wider text-primary font-mono">
                   {ticket.ticket_code}
                 </p>
+                {/* @ts-ignore */}
+                {ticket.payment_ref_id && (
+                  <p className="text-[10px] text-muted-foreground font-mono mt-1">Ref: {ticket.payment_ref_id}</p>
+                )}
               </div>
             </div>
 
             {/* Location QR Code */}
             <div className="flex flex-col items-center gap-2">
               <div className="relative">
-                <LocationQR 
-                  address={ticket.events.venue} 
+                <LocationQR
+                  address={ticket.events.venue}
                   size={compact ? 100 : 140}
                   showLabel={false}
                 />

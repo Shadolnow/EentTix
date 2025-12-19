@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, CheckCircle, Clock, MoreHorizontal, Ban, Banknote, AlertCircle } from 'lucide-react';
+import { Download, CheckCircle, Clock, MoreHorizontal, Ban, Banknote, AlertCircle, Trash2 } from 'lucide-react';
+
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +26,28 @@ interface AttendeeListProps {
 export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const deleteTicket = async (ticketId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this ticket? This cannot be undone.")) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', ticketId);
+
+      if (error) throw error;
+      toast.success('Ticket deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting ticket:', err);
+      toast.error('Failed to delete ticket');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const downloadCSV = async () => {
     if (tickets.length === 0) {
@@ -203,11 +226,18 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
 
                           {/* Cancellation Actions */}
                           {(ticket.payment_status !== 'cancelled' && ticket.payment_status !== 'expired' && !ticket.is_validated) && (
-                            <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, 'cancelled')} className="text-destructive">
+                            <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, 'cancelled')} className="text-orange-500">
                               <Ban className="mr-2 h-4 w-4" />
                               Revoke / Cancel
                             </DropdownMenuItem>
                           )}
+
+                          {/* Delete Action (Hard Delete) */}
+                          <DropdownMenuItem onClick={() => deleteTicket(ticket.id)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Permanently
+                          </DropdownMenuItem>
+
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

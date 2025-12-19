@@ -4,7 +4,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Calendar, MapPin, Ticket, QrCode, Share2, ExternalLink, Settings, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Ticket, QrCode, Share2, ExternalLink, Settings, Download, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';

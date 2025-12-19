@@ -1,58 +1,72 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export default async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { email } = req.body;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+
+  // Check for required environment variables
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!resendApiKey) {
+    console.error('RESEND_API_KEY is not configured');
+    return res.status(500).json({ error: 'Email service not configured. Please contact support.' });
+  }
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase credentials not configured');
+    return res.status(500).json({ error: 'Database service not configured. Please contact support.' });
+  }
+
+  try {
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in Supabase
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { error: dbError } = await supabase
+      .from('otp_verifications')
+      .insert({
+        email: email.toLowerCase(),
+        otp_code: otp,
+        expires_at: expiresAt.toISOString(),
+        verified: false
+      });
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw new Error('Failed to store verification code');
     }
 
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    const { email } = req.body;
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ error: 'Valid email is required' });
-    }
-
-    try {
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-        // Store OTP in Supabase
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-            process.env.VITE_SUPABASE_URL,
-            process.env.VITE_SUPABASE_ANON_KEY
-        );
-
-        const { error: dbError } = await supabase
-            .from('otp_verifications')
-            .insert({
-                email: email.toLowerCase(),
-                otp_code: otp,
-                expires_at: expiresAt.toISOString(),
-                verified: false
-            });
-
-        if (dbError) throw dbError;
-
-        // Send OTP via Resend
-        const { error: emailError } = await resend.emails.send({
-            from: 'EventTix <noreply@yourdomain.com>',
-            to: email,
-            subject: `Your EventTix verification code: ${otp}`,
-            html: `
+    // Send OTP via Resend
+    const resend = new Resend(resendApiKey);
+    const { error: emailError } = await resend.emails.send({
+      from: 'EventTix <onboarding@resend.dev>',
+      to: email,
+      subject: `Your EventTix verification code: ${otp}`,
+      html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -80,13 +94,16 @@ export default async function handler(req, res) {
           </body>
         </html>
       `
-        });
+    });
 
-        if (emailError) throw emailError;
-
-        res.status(200).json({ success: true, message: 'OTP sent successfully' });
-    } catch (error) {
-        console.error('Send OTP error:', error);
-        res.status(500).json({ error: 'Failed to send OTP', details: error.message });
+    if (emailError) {
+      console.error('Resend error:', emailError);
+      throw new Error('Failed to send verification email');
     }
+
+    res.status(200).json({ success: true, message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send OTP' });
+  }
 }

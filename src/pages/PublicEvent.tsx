@@ -13,10 +13,10 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { TicketCard } from '@/components/TicketCard';
 import { TierSelector } from '@/components/TierSelector';
+import { RazorpayCheckout } from '@/components/RazorpayCheckout';
 import { downloadICS } from '@/utils/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { QRCodeSVG } from 'qrcode.react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   InputOTP,
   InputOTPGroup,
@@ -696,81 +696,53 @@ const PublicEvent = () => {
 
         {/* Payment Dialog */}
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Complete Payment</DialogTitle>
               <DialogDescription>
-                Scan the QR code to pay <strong>₹{ticketPrice}</strong> for your ticket.
+                Choose your preferred payment method to buy your ticket instantly.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col items-center justify-center p-6 space-y-6">
-              {/* QR Code Display */}
-              <div className="bg-white p-4 rounded-xl shadow-lg border">
-                {event?.payment_qr_image_url ? (
-                  <img
-                    src={event.payment_qr_image_url}
-                    alt="Payment QR"
-                    className="w-48 h-48 object-contain"
-                  />
-                ) : event?.upi_id ? (
-                  <QRCodeSVG
-                    value={`upi://pay?pa=${event.upi_id}&pn=TicketPro&am=${ticketPrice}&cu=INR`}
-                    size={192}
-                    level="M"
-                  />
-                ) : (
-                  <div className="w-48 h-48 flex items-center justify-center bg-gray-100 text-center p-2 text-sm text-gray-500">
-                    No Payment QR available. Please contact organizer.
-                  </div>
-                )}
-              </div>
+            <RazorpayCheckout
+              amount={ticketPrice}
+              description={`${event.title} - ${selectedTier ? selectedTier.name : 'Standard'} Ticket`}
+              orderId="" // This will be set when we create the order
+              customerInfo={{
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+              }}
+              onSuccess={async (paymentResponse) => {
+                // For localhost development, simulate successful payment
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  setTransactionId(`LOCAL_${Date.now()}`);
+                  await createTicket('online');
+                  toast.success('Payment successful! (Development mode)');
+                  return;
+                }
 
-              {event?.upi_id && (
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">UPI ID</p>
-                  <div className="flex items-center gap-2 bg-muted px-3 py-1 rounded-full">
-                    <code className="text-sm font-mono text-primary">{event.upi_id}</code>
-                  </div>
-                </div>
-              )}
+                // Production: Update ticket with payment reference
+                setTransactionId(paymentResponse.paymentId);
+                // Create ticket with payment confirmation
+                await createTicket('online');
+              }}
+              onFailure={(error) => {
+                console.error('Payment failed:', error);
+                toast.error('Payment failed. Please try again.');
+              }}
+            />
 
-              <div className="w-full space-y-2">
-                <Label htmlFor="txnId">Transaction ID / REF No. (Optional)</Label>
-                <Input
-                  id="txnId"
-                  placeholder="e.g. 3j4k5l6m7n8"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter the reference number from your payment app for faster confirmation.
-                </p>
-              </div>
+            <div className="flex justify-center pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => createTicket('venue')}
+                disabled={loading}
+                className="border-primary text-primary hover:bg-primary/10"
+              >
+                Pay at Venue Instead
+              </Button>
             </div>
-
-            <DialogFooter className="flex-col sm:flex-col gap-2 space-y-2">
-              <Button onClick={() => createTicket('online')} disabled={loading} className="w-full bg-green-600 hover:bg-green-700">
-                {loading ? 'Processing...' : 'I Have Paid • Confirm Ticket'}
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or</span>
-                </div>
-              </div>
-              <Button onClick={() => createTicket('venue')} disabled={loading} variant="outline" className="w-full border-primary text-primary hover:bg-primary/10">
-                Generate Pay-At-Venue Token
-              </Button>
-              <Button variant="ghost" onClick={() => setShowPaymentDialog(false)} className="w-full">
-                Cancel
-              </Button>
-              <p className="text-xs text-center text-muted-foreground mt-2 px-4 leading-relaxed">
-                Payments need to be made within 24 hours of booking. Call <span className="text-foreground font-medium">7507066880</span> for confirmation.
-              </p>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
