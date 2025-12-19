@@ -1,12 +1,14 @@
 // Client-side utilities for Razorpay integration
 
+export interface RazorpayInstance {
+  open: () => void;
+  close: () => void;
+  on: (event: string, callback: (response: any) => void) => void;
+}
+
 declare global {
   interface Window {
-    Razorpay: new (options: RazorpayOptions) => {
-      open: () => void;
-      close: () => void;
-      on: (event: string, callback: () => void) => void;
-    };
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
   }
 }
 
@@ -48,7 +50,7 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const initializeRazorpay = (options: RazorpayOptions) => {
+export const initializeRazorpay = (options: RazorpayOptions): RazorpayInstance => {
   if (typeof window !== 'undefined' && window.Razorpay) {
     const rzp = new window.Razorpay(options);
     return rzp;

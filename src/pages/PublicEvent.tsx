@@ -102,15 +102,18 @@ const PublicEvent = () => {
         }
       }
 
-      const response = await fetch('/api/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: validated.email })
+      const response = await supabase.functions.invoke('send-otp', {
+        body: { email: validated.email }
       });
 
-      const result = await response.json();
+      if (response.error) {
+        toast.error(response.error.message || 'Failed to send OTP');
+        setLoading(false);
+        return;
+      }
 
-      if (!response.ok) {
+      const result = response.data;
+      if (!result.success) {
         toast.error(result.error || 'Failed to send OTP');
         setLoading(false);
         return;
@@ -133,16 +136,14 @@ const PublicEvent = () => {
   const verifyOtp = async () => {
     setLoading(true);
     try {
-      const verifyResponse = await fetch('/api/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, otp })
+      const verifyResponse = await supabase.functions.invoke('verify-otp', {
+        body: { email: formData.email, otp }
       });
 
-      const verifyResult = await verifyResponse.json();
-
-      if (!verifyResponse.ok) throw new Error(verifyResult.error || "Invalid OTP");
-      if (!verifyResult.success) throw new Error("Verification failed");
+      if (verifyResponse.error) throw new Error(verifyResponse.error.message || "Invalid OTP");
+      
+      const verifyResult = verifyResponse.data;
+      if (!verifyResult.success) throw new Error(verifyResult.error || "Verification failed");
 
       setIsEmailVerified(true);
 

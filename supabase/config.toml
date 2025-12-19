@@ -1,4 +1,4 @@
-project_id = "vieaezhcsugfqvkgnuhm"
+project_id = "dmksigdpcbdvyejtedju"
 
 [functions.admin-list-users]
 verify_jwt = true
@@ -16,10 +16,19 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.health-check]
-verify_jwt = true
+verify_jwt = false
 
 [functions.export-attendees]
 verify_jwt = true
 
 [functions.create-payment-order]
-verify_jwt = true
+verify_jwt = false
+
+[functions.send-ticket-email]
+verify_jwt = false
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false

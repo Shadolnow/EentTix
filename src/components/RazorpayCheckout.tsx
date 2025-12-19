@@ -141,7 +141,7 @@ export const RazorpayCheckout = ({
 
             const rzp = initializeRazorpay(options);
 
-            rzp.on('payment.failed', (response: any) => {
+            (rzp as any).on('payment.failed', (response: any) => {
                 console.error('Payment failed:', response.error);
                 onFailure(response.error);
             });
