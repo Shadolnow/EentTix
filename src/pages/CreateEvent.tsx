@@ -148,7 +148,7 @@ const CreateEvent = () => {
                   id="image"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleImageChange(e, 'event')}
+                  onChange={handleImageChange}
                 />
                 {imagePreview && (
                   <div className="mt-2">
