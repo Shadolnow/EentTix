@@ -44,6 +44,7 @@ const PublicEvent = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any>(null);
+  const [bankDetails, setBankDetails] = useState<any>(null);
   const [claimedTicket, setClaimedTicket] = useState<any>(null);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,18 @@ const PublicEvent = () => {
         .limit(1);
 
       setHasTiers(tiers && tiers.length > 0);
+
+      // Fetch Bank Details (UPI)
+      const { data: bankData } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (bankData) {
+        setBankDetails(bankData);
+      }
     };
 
     fetchEvent();
@@ -814,11 +827,11 @@ const PublicEvent = () => {
                   </div>
 
                   {/* UPI QR Code */}
-                  {event.payment_qr_image_url && (
+                  {(bankDetails?.qr_code_url || event.payment_qr_image_url) && (
                     <div className="flex justify-center mb-3">
                       <div className="bg-white p-3 rounded-xl">
                         <img
-                          src={event.payment_qr_image_url}
+                          src={bankDetails?.qr_code_url || event.payment_qr_image_url}
                           alt="UPI QR Code"
                           className="w-40 h-40 object-contain"
                         />
@@ -827,20 +840,27 @@ const PublicEvent = () => {
                   )}
 
                   {/* UPI ID */}
-                  {event.upi_id && (
+                  {(bankDetails?.upi_id || event.upi_id) ? (
                     <div className="mb-3">
                       <p className="text-xs text-center text-muted-foreground mb-1">Or pay to UPI ID</p>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(event.upi_id);
+                          const id = bankDetails?.upi_id || event.upi_id;
+                          navigator.clipboard.writeText(id);
                           toast.success('UPI ID copied!');
                         }}
                         className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-background rounded-lg border border-border hover:border-primary/50 transition-colors"
                       >
-                        <code className="font-mono text-sm font-medium text-primary">{event.upi_id}</code>
+                        <code className="font-mono text-sm font-medium text-primary">{bankDetails?.upi_id || event.upi_id}</code>
                         <Copy className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </div>
+                  ) : (
+                    !bankDetails?.qr_code_url && !event.payment_qr_image_url && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs rounded-lg mb-3 text-center">
+                        ⚠️ Organizer hasn't provided payment details. Please contact them directly.
+                      </div>
+                    )
                   )}
 
                   {/* Instruction */}
