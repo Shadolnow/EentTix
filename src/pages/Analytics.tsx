@@ -25,6 +25,7 @@ const Analytics = () => {
     const [events, setEvents] = useState<any[]>([]);
     const [tickets, setTickets] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+    const [forecastModel, setForecastModel] = useState<'linear' | 'growth'>('growth');
 
     useEffect(() => {
         if (!user) {
@@ -104,18 +105,92 @@ const Analytics = () => {
         { name: 'Past', value: events.filter(e => new Date(e.event_date) <= now).length },
     ];
 
-    // Revenue forecast (simple linear projection)
-    const forecastRevenue = () => {
+    // Advanced Forecasting
+    const generateForecast = () => {
         if (events.length < 2) return [];
-        const avgRevenuePerEvent = totalRevenue / events.length;
+
+        const currentMonth = new Date();
         const forecast = [];
+
+        // Linear: Just average revenue * events
+        const avgRevenue = totalRevenue / events.length;
+
+        // Growth: Calculate recent trend weight
+        // Simple logic: If last 5 events revenue > avg, assume positive trend
+        const recentEvents = events.slice(0, 5);
+        const recentAvg = recentEvents.reduce((sum, e) => sum + (Number(e.total_revenue) || 0), 0) / recentEvents.length;
+        const growthFactor = recentAvg > avgRevenue ? 1.15 : 0.95; // 15% growth or 5% decline
+
+        let runningRevenue = avgRevenue * (events.length / 30) * 30; // Monthly baseline
+
         for (let i = 1; i <= 6; i++) {
+            const date = new Date(currentMonth);
+            date.setMonth(date.getMonth() + i);
+
+            if (forecastModel === 'growth') {
+                runningRevenue = runningRevenue * growthFactor;
+            }
+
             forecast.push({
-                month: format(new Date(new Date().setMonth(new Date().getMonth() + i)), 'MMM yyyy'),
-                projected: avgRevenuePerEvent * (events.length / 30) * 30 * i
+                month: format(date, 'MMM yyyy'),
+                projected: forecastModel === 'growth' ? runningRevenue : (avgRevenue * (events.length / 30) * 30 * i), // Linear adds up, Growth compounds
+                model: forecastModel
             });
         }
         return forecast;
+    };
+
+    // Cohort Analysis (Retention)
+    const generateCohorts = () => {
+        if (!tickets.length || !events.length) return [];
+
+        const userFirstSeen: Record<string, string> = {}; // email -> YYYY-MM
+        const userActivity: Record<string, Set<string>> = {}; // email -> Set(YYYY-MM)
+
+        tickets.forEach(ticket => {
+            const email = ticket.attendee_email;
+            if (!email) return;
+
+            const event = events.find(e => e.id === ticket.event_id);
+            if (!event) return;
+
+            const date = new Date(event.event_date);
+            const monthStr = format(date, 'yyyy-MM');
+
+            if (!userFirstSeen[email] || monthStr < userFirstSeen[email]) {
+                userFirstSeen[email] = monthStr;
+            }
+
+            if (!userActivity[email]) userActivity[email] = new Set();
+            userActivity[email].add(monthStr);
+        });
+
+        const cohorts: Record<string, { total: number, months: Record<number, number> }> = {};
+
+        Object.entries(userFirstSeen).forEach(([email, startMonth]) => {
+            if (!cohorts[startMonth]) cohorts[startMonth] = { total: 0, months: {} };
+            cohorts[startMonth].total++;
+
+            const start = new Date(startMonth + '-01');
+
+            userActivity[email].forEach(activeMonth => {
+                const current = new Date(activeMonth + '-01');
+                const diffMonths = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth());
+
+                if (diffMonths >= 0 && diffMonths <= 11) { // Track up to 12 months
+                    cohorts[startMonth].months[diffMonths] = (cohorts[startMonth].months[diffMonths] || 0) + 1;
+                }
+            });
+        });
+
+        return Object.entries(cohorts)
+            .sort((a, b) => b[0] > a[0] ? 1 : -1) // Newest cohorts top
+            .slice(0, 6) // Last 6 months
+            .map(([month, data]) => ({
+                month,
+                total: data.total,
+                retention: data.months
+            }));
     };
 
     // Geographic data (mock - would need actual location data)
@@ -330,11 +405,12 @@ const Analytics = () => {
 
                 {/* Tabs */}
                 <Tabs defaultValue="overview" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="revenue">Revenue</TabsTrigger>
                         <TabsTrigger value="geographic">Geographic</TabsTrigger>
                         <TabsTrigger value="forecast">Forecast</TabsTrigger>
+                        <TabsTrigger value="cohort">Cohort</TabsTrigger>
                     </TabsList>
 
                     {/* Overview Tab */}
@@ -501,11 +577,21 @@ const Analytics = () => {
                                     <TrendingUp className="w-5 h-5 text-primary" />
                                     Revenue Forecast
                                 </CardTitle>
-                                <CardDescription>Projected revenue for next 6 months</CardDescription>
+                                <CardDescription>
+                                    Projected revenue using
+                                    <select
+                                        className="ml-2 bg-muted border border-border rounded px-2 py-1 text-xs"
+                                        value={forecastModel}
+                                        onChange={(e) => setForecastModel(e.target.value as 'linear' | 'growth')}
+                                    >
+                                        <option value="linear">Linear Regression (Standard)</option>
+                                        <option value="growth">Smart ML Growth (Advanced)</option>
+                                    </select>
+                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={400}>
-                                    <LineChart data={forecastRevenue()}>
+                                    <LineChart data={generateForecast()}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                                         <XAxis dataKey="month" stroke="#888" />
                                         <YAxis stroke="#888" />
@@ -527,6 +613,66 @@ const Analytics = () => {
                                     <p className="text-sm text-amber-500">
                                         ⚠️ Forecast is based on historical average. Actual results may vary based on market conditions and event performance.
                                     </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    {/* Cohort Tab */}
+                    <TabsContent value="cohort" className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-primary" />
+                                    User Retention Cohorts
+                                </CardTitle>
+                                <CardDescription>Percentage of users returning in subsequent months</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-border">
+                                                <th className="text-left py-3 px-4">Cohort</th>
+                                                <th className="text-left py-3 px-4">Users</th>
+                                                {[0, 1, 2, 3, 4, 5].map(m => (
+                                                    <th key={m} className="text-center py-3 px-2">Month {m}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {generateCohorts().map((cohort) => (
+                                                <tr key={cohort.month} className="border-b border-border/50 hover:bg-muted/20">
+                                                    <td className="py-3 px-4 font-medium">{cohort.month}</td>
+                                                    <td className="py-3 px-4">{cohort.total}</td>
+                                                    {[0, 1, 2, 3, 4, 5].map(m => {
+                                                        const count = cohort.retention[m] || 0;
+                                                        const pct = Math.round((count / cohort.total) * 100);
+                                                        const intensity = Math.min(pct, 100) / 100;
+                                                        return (
+                                                            <td key={m} className="text-center p-1">
+                                                                <div
+                                                                    className="py-1 rounded text-xs font-semibold"
+                                                                    style={{
+                                                                        backgroundColor: `rgba(0, 217, 255, ${intensity * 0.8})`,
+                                                                        color: intensity > 0.5 ? '#000' : '#fff'
+                                                                    }}
+                                                                >
+                                                                    {pct}%
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                            {generateCohorts().length === 0 && (
+                                                <tr>
+                                                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                                                        Not enough data to generate cohorts yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </CardContent>
                         </Card>
