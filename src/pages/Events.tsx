@@ -113,6 +113,9 @@ const Events = () => {
                       level="H"
                     />
                   </div>
+                  <p className="text-[10px] text-muted-foreground font-mono text-center break-all max-w-[180px]">
+                    {PUBLIC_BASE_URL}/e/{event.id}
+                  </p>
                   <div className="flex gap-2 w-full">
                     <Button
                       variant="outline"
