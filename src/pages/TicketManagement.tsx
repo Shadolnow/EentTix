@@ -14,7 +14,7 @@ import { EventStats } from '@/components/EventStats';
 import { EventCustomization } from '@/components/EventCustomization';
 import { toast } from 'sonner';
 import { getUserFriendlyError } from '@/lib/errorHandler';
-import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2, CreditCard } from 'lucide-react';
 import { z } from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -33,6 +33,13 @@ const TicketManagement = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [bankAccount, setBankAccount] = useState<any>(null);
+  const [isBankSaving, setIsBankSaving] = useState(false);
+  const [bankForm, setBankForm] = useState({
+    account_holder_name: '',
+    upi_id: '',
+    qr_code_url: ''
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,6 +83,23 @@ const TicketManagement = () => {
         .order('created_at', { ascending: false });
 
       if (ticketsData) setTickets(ticketsData);
+
+      // Fetch Bank Account
+      const { data: bankData } = await (supabase as any)
+        .from('bank_accounts')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (bankData) {
+        setBankAccount(bankData);
+        setBankForm({
+          account_holder_name: bankData.account_holder_name || '',
+          upi_id: bankData.upi_id || '',
+          qr_code_url: bankData.qr_code_url || ''
+        });
+      }
     };
 
     fetchEventAndTickets();
@@ -266,6 +290,56 @@ const TicketManagement = () => {
     }
   };
 
+  const handleBankSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !eventId) return;
+    setIsBankSaving(true);
+
+    try {
+      const payload = {
+        user_id: user.id,
+        event_id: eventId,
+        is_primary: true,
+        account_holder_name: bankForm.account_holder_name,
+        upi_id: bankForm.upi_id,
+        qr_code_url: bankForm.qr_code_url,
+        bank_name: 'UPI', // Default for UPI-first flow
+        account_number: 'N/A',
+        ifsc_code: 'N/A'
+      };
+
+      if (bankAccount) {
+        // Update
+        const { error } = await (supabase as any)
+          .from('bank_accounts')
+          .update(payload)
+          .eq('id', bankAccount.id);
+        if (error) throw error;
+      } else {
+        // Insert
+        const { error } = await (supabase as any)
+          .from('bank_accounts')
+          .insert(payload);
+        if (error) throw error;
+      }
+      toast.success("Payment details updated!");
+
+      // Refresh
+      const { data: refreshed } = await (supabase as any)
+        .from('bank_accounts')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('is_primary', true)
+        .maybeSingle();
+      if (refreshed) setBankAccount(refreshed);
+
+    } catch (err: any) {
+      toast.error("Failed to save payment details: " + err.message);
+    } finally {
+      setIsBankSaving(false);
+    }
+  };
+
   if (!event) return null;
 
   const validatedCount = tickets.filter(t => t.is_validated).length;
@@ -412,7 +486,7 @@ const TicketManagement = () => {
             />
 
             <Tabs defaultValue="tickets" className="space-y-6">
-              <TabsList className="grid w-full md:w-auto grid-cols-3">
+              <TabsList className="grid w-full md:w-auto grid-cols-4">
                 <TabsTrigger value="tickets">
                   <TicketIcon className="w-4 h-4 mr-2" />
                   Tickets
@@ -424,6 +498,10 @@ const TicketManagement = () => {
                 <TabsTrigger value="customize">
                   <Settings className="w-4 h-4 mr-2" />
                   Customize
+                </TabsTrigger>
+                <TabsTrigger value="payment">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Payment
                 </TabsTrigger>
               </TabsList>
 
@@ -457,6 +535,51 @@ const TicketManagement = () => {
                     sponsors: event.sponsors
                   }}
                 />
+              </TabsContent>
+
+              <TabsContent value="payment">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      Payment Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleBankSave} className="space-y-4 max-w-md">
+                      <div className="space-y-2">
+                        <Label>Account Holder Name</Label>
+                        <Input
+                          value={bankForm.account_holder_name}
+                          onChange={e => setBankForm({ ...bankForm, account_holder_name: e.target.value })}
+                          placeholder="Enter your name"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>UPI ID</Label>
+                        <Input
+                          value={bankForm.upi_id}
+                          onChange={e => setBankForm({ ...bankForm, upi_id: e.target.value })}
+                          placeholder="yourname@upi"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>QR Code URL (Image Link)</Label>
+                        <Input
+                          value={bankForm.qr_code_url}
+                          onChange={e => setBankForm({ ...bankForm, qr_code_url: e.target.value })}
+                          placeholder="https://example.com/qr.png"
+                        />
+                        <p className="text-xs text-muted-foreground">Upload your QR code to a public URL and paste it here.</p>
+                      </div>
+                      <Button type="submit" disabled={isBankSaving} className="w-full">
+                        {isBankSaving ? "Saving..." : "Save Payment Details"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
