@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { EventStats } from '@/components/EventStats';
 import { EventCustomization } from '@/components/EventCustomization';
 import { toast } from 'sonner';
 import { getUserFriendlyError } from '@/lib/errorHandler';
-import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2, CreditCard } from 'lucide-react';
+import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -340,6 +341,23 @@ const TicketManagement = () => {
     }
   };
 
+  const handleVerifyPayment = async (ticketId: string) => {
+    try {
+      const { error } = await (supabase as any)
+        .from('tickets')
+        .update({ payment_status: 'paid' })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+      toast.success("Payment verified! Ticket is now valid.");
+      // List will update via realtime subscription
+    } catch (err: any) {
+      toast.error("Failed to verify: " + err.message);
+    }
+  };
+
+  const pendingTickets = tickets.filter(t => t.payment_status === 'pending');
+
   if (!event) return null;
 
   const validatedCount = tickets.filter(t => t.is_validated).length;
@@ -506,6 +524,32 @@ const TicketManagement = () => {
               </TabsList>
 
               <TabsContent value="tickets">
+                {pendingTickets.length > 0 && (
+                  <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <h3 className="text-xl font-bold flex items-center gap-2 text-amber-500 mb-4">
+                      <AlertCircle className="w-6 h-6" />
+                      Pending Payment Verifications ({pendingTickets.length})
+                    </h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {pendingTickets.map(ticket => (
+                        <div key={ticket.id} className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
+                          <div>
+                            <p className="font-semibold">{ticket.attendee_name}</p>
+                            <p className="text-sm text-muted-foreground">{ticket.ticket_code}</p>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {ticket.payment_ref_id || 'Manual'}
+                            </Badge>
+                          </div>
+                          <Button size="sm" onClick={() => handleVerifyPayment(ticket.id)} className="bg-green-600 hover:bg-green-700">
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Verify
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                   {tickets.map((ticket) => (
                     <Link key={ticket.id} to={`/ ticket / ${ticket.id} `}>
