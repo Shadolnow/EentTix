@@ -15,6 +15,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileSpreadsheet } from 'lucide-react';
 
 const COLORS = ['#00D9FF', '#A855F7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -26,6 +31,10 @@ const Analytics = () => {
     const [tickets, setTickets] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
     const [forecastModel, setForecastModel] = useState<'linear' | 'growth'>('growth');
+    const [reportConfig, setReportConfig] = useState({
+        groupBy: 'event',
+        metrics: ['revenue', 'tickets', 'attendees']
+    });
 
     useEffect(() => {
         if (!user) {
@@ -139,6 +148,46 @@ const Analytics = () => {
         }
         return forecast;
     };
+
+    // Custom Report Builder Logic
+    const generateCustomReport = () => {
+        let reportData: any[] = [];
+
+        if (reportConfig.groupBy === 'event') {
+            reportData = events.map(e => {
+                const eventTickets = tickets.filter(t => t.event_id === e.id);
+                return {
+                    label: e.title,
+                    revenue: Number(e.total_revenue) || 0,
+                    tickets: eventTickets.length,
+                    attendees: new Set(eventTickets.map(t => t.attendee_email)).size
+                };
+            });
+        } else if (reportConfig.groupBy === 'date') {
+            const grouped = events.reduce((acc: any, e) => {
+                const month = format(new Date(e.event_date), 'MMM yyyy');
+                if (!acc[month]) acc[month] = { revenue: 0, tickets: 0, attendees: new Set() };
+
+                acc[month].revenue += Number(e.total_revenue) || 0;
+
+                const eventTickets = tickets.filter(t => t.event_id === e.id);
+                acc[month].tickets += eventTickets.length;
+                eventTickets.forEach(t => acc[month].attendees.add(t.attendee_email));
+
+                return acc;
+            }, {});
+
+            reportData = Object.entries(grouped).map(([label, data]: any) => ({
+                label,
+                revenue: data.revenue,
+                tickets: data.tickets,
+                attendees: data.attendees.size
+            }));
+        }
+
+        return reportData;
+    };
+
 
     // Cohort Analysis (Retention)
     const generateCohorts = () => {
@@ -405,12 +454,13 @@ const Analytics = () => {
 
                 {/* Tabs */}
                 <Tabs defaultValue="overview" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-6">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="revenue">Revenue</TabsTrigger>
                         <TabsTrigger value="geographic">Geographic</TabsTrigger>
                         <TabsTrigger value="forecast">Forecast</TabsTrigger>
                         <TabsTrigger value="cohort">Cohort</TabsTrigger>
+                        <TabsTrigger value="reports">Report Builder</TabsTrigger>
                     </TabsList>
 
                     {/* Overview Tab */}
@@ -673,6 +723,98 @@ const Analytics = () => {
                                             )}
                                         </tbody>
                                     </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    {/* Report Builder Tab */}
+                    <TabsContent value="reports" className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileSpreadsheet className="w-5 h-5 text-primary" />
+                                    Custom Report Builder
+                                </CardTitle>
+                                <CardDescription>Create specific reports based on your needs</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid md:grid-cols-3 gap-6 mb-6 p-4 bg-muted/20 rounded-lg">
+                                    <div className="space-y-2">
+                                        <Label>Group Data By</Label>
+                                        <Select
+                                            value={reportConfig.groupBy}
+                                            onValueChange={(val) => setReportConfig({ ...reportConfig, groupBy: val })}
+                                        >
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="event">Event Name</SelectItem>
+                                                <SelectItem value="date">Month (Date)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Select Metrics</Label>
+                                        <div className="flex flex-col gap-2">
+                                            {['revenue', 'tickets', 'attendees'].map(metric => (
+                                                <div key={metric} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={metric}
+                                                        checked={reportConfig.metrics.includes(metric)}
+                                                        onCheckedChange={(checked) => {
+                                                            const newMetrics = checked
+                                                                ? [...reportConfig.metrics, metric]
+                                                                : reportConfig.metrics.filter(m => m !== metric);
+                                                            setReportConfig({ ...reportConfig, metrics: newMetrics });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={metric} className="capitalize">{metric}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <Button className="w-full" onClick={() => toast.success('Report updated!')}>
+                                            Refresh Report
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[200px] font-bold">
+                                                    {reportConfig.groupBy === 'event' ? 'Event Name' : 'Month'}
+                                                </TableHead>
+                                                {reportConfig.metrics.includes('revenue') && <TableHead className="text-right">Revenue</TableHead>}
+                                                {reportConfig.metrics.includes('tickets') && <TableHead className="text-right">Tickets Sold</TableHead>}
+                                                {reportConfig.metrics.includes('attendees') && <TableHead className="text-right">Unique Attendees</TableHead>}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {generateCustomReport().map((row, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell className="font-medium">{row.label}</TableCell>
+                                                    {reportConfig.metrics.includes('revenue') && (
+                                                        <TableCell className="text-right">₹{row.revenue.toFixed(2)}</TableCell>
+                                                    )}
+                                                    {reportConfig.metrics.includes('tickets') && (
+                                                        <TableCell className="text-right">{row.tickets}</TableCell>
+                                                    )}
+                                                    {reportConfig.metrics.includes('attendees') && (
+                                                        <TableCell className="text-right">{row.attendees}</TableCell>
+                                                    )}
+                                                </TableRow>
+                                            ))}
+                                            {generateCustomReport().length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                                                        No data available for this selection
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </CardContent>
                         </Card>
