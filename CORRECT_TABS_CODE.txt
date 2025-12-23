@@ -1,0 +1,27 @@
+// LINES 761-763 SHOULD LOOK EXACTLY LIKE THIS:
+
+              </Card>
+            </TabsContent>
+
+            {/* Bulk Ticket Tab */}
+            <TabsContent value="bulk">
+              <BulkTicketTab
+                eventId={eventId!}
+                event={event}
+                onSuccess={(tickets) => {
+                  if (tickets.length > 0) {
+                    setClaimedTicket({
+                      ...tickets[0],
+                      events: event
+                    });
+                  }
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+          </div>
+        ) : (
+
+
+// IMPORTANT: Make sure to DELETE any duplicate BulkTicketTab code below this!

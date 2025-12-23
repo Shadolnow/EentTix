@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SocialShare } from '@/components/SocialShare';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Calendar, MapPin, Download, ArrowLeft, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle, Video, Instagram, Facebook, Twitter, Linkedin, Youtube, Globe, Award, CheckCircle2, Copy, IndianRupee, Music, Tv, Disc3 } from 'lucide-react';
+import { Calendar, MapPin, Download, ArrowLeft, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle, Video, Instagram, Facebook, Twitter, Linkedin, Youtube, Globe, Award, CheckCircle2, Copy, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -27,7 +27,6 @@ import confetti from 'canvas-confetti';
 import { ReviewSection } from '@/components/ReviewSection';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { useAuth } from '@/components/AuthProvider';
-import { MultiTicketSelector } from '@/components/MultiTicketSelector';
 import { BulkTicketTab } from '@/components/BulkTicketTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -674,91 +673,117 @@ const PublicEvent = () => {
             {(event.capacity && ticketsSold >= event.capacity) ? (
               <WaitlistForm eventId={eventId!} />
             ) : (
-              <Card className="border-2 border-primary/20 shadow-lg shadow-primary/5">
-                <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Ticket className="w-6 h-6 text-primary" />
-                    {event.is_free ? 'Register for Free' : 'Buy Ticket'}
-                  </CardTitle>
-                  <CardDescription>
-                    Enter your details to book your spot.
-                  </CardDescription>
-                  {/* Checkout Progress Indicator */}
-                  <CheckoutProgress
-                    currentStep={claimedTicket ? 'confirm' : 'details'}
-                  />
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleClaim} className="space-y-4">
-                    {hasTiers && (
-                      <TierSelector
-                        eventId={eventId!}
-                        isFreeEvent={event.is_free}
-                        selectedTierId={selectedTier?.id || null}
-                        onSelect={(tier) => setSelectedTier(tier ? { id: tier.id, name: tier.name, price: tier.price } : null)}
+              <Tabs defaultValue="single" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="single">🎫 Single Ticket</TabsTrigger>
+                  <TabsTrigger value="bulk">🎟️ Bulk Tickets</TabsTrigger>
+                </TabsList>
+
+                {/* Single Ticket Tab */}
+                <TabsContent value="single">
+                  <Card className="border-2 border-primary/20 shadow-lg shadow-primary/5">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Ticket className="w-6 h-6 text-primary" />
+                        {event.is_free ? 'Register for Free' : 'Buy Ticket'}
+                      </CardTitle>
+                      <CardDescription>
+                        Enter your details to book your spot.
+                      </CardDescription>
+                      {/* Checkout Progress Indicator */}
+                      <CheckoutProgress
+                        currentStep={claimedTicket ? 'confirm' : 'details'}
                       />
-                    )}
-
-                    {!event.is_free && !hasTiers && (
-                      <div className="p-4 bg-muted rounded-lg flex justify-between items-center">
-                        <span className="font-medium">Standard Ticket</span>
-                        <span className="text-xl font-bold text-primary">₹{event.ticket_price}</span>
-                      </div>
-                    )}
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          required
-                          placeholder="John Doe"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (WhatsApp)</Label>
-                        <Input
-                          id="phone"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          required
-                          placeholder="+91 9876543210"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                        placeholder="john@example.com"
-                      />
-                      <p className="text-xs text-muted-foreground">We'll send your ticket to this email.</p>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full btn-mobile-primary relative overflow-hidden group bg-gradient-to-r from-primary to-accent"
-                      disabled={loading || (hasTiers && !selectedTier)}
-                    >
-                      <span className="relative z-10 flex items-center justify-center gap-2">
-                        {loading ? 'Processing...' : (
-                          <>
-                            {event.is_free ? '🎫 Get My Free Ticket' : '💳 Proceed to Payment'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
-                          </>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleClaim} className="space-y-4">
+                        {hasTiers && (
+                          <TierSelector
+                            eventId={eventId!}
+                            isFreeEvent={event.is_free}
+                            selectedTierId={selectedTier?.id || null}
+                            onSelect={(tier) => setSelectedTier(tier ? { id: tier.id, name: tier.name, price: tier.price } : null)}
+                          />
                         )}
-                      </span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+
+                        {!event.is_free && !hasTiers && (
+                          <div className="p-4 bg-muted rounded-lg flex justify-between items-center">
+                            <span className="font-medium">Standard Ticket</span>
+                            <span className="text-xl font-bold text-primary">₹{event.ticket_price}</span>
+                          </div>
+                        )}
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Full Name</Label>
+                            <Input
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              required
+                              placeholder="John Doe"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone (WhatsApp)</Label>
+                            <Input
+                              id="phone"
+                              value={formData.phone}
+                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                              required
+                              placeholder="+91 9876543210"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                            placeholder="john@example.com"
+                          />
+                          <p className="text-xs text-muted-foreground">We'll send your ticket to this email.</p>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full btn-mobile-primary relative overflow-hidden group bg-gradient-to-r from-primary to-accent"
+                          disabled={loading || (hasTiers && !selectedTier)}
+                        >
+                          <span className="relative z-10 flex items-center justify-center gap-2">
+                            {loading ? 'Processing...' : (
+                              <>
+                                {event.is_free ? '🎫 Get My Free Ticket' : '💳 Proceed to Payment'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
+                              </>
+                            )}
+                          </span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Bulk Ticket Tab */}
+                <TabsContent value="bulk">
+                  <BulkTicketTab
+                    eventId={eventId!}
+                    event={event}
+                    onSuccess={(tickets) => {
+                      if (tickets.length > 0) {
+                        setClaimedTicket({
+                          ...tickets[0],
+                          events: event
+                        });
+                      }
+                    }}
+                  />
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         ) : (
@@ -902,58 +927,18 @@ const PublicEvent = () => {
                     )
                   )}
 
-                  {/* Transaction ID Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="transaction-id" className="text-sm font-semibold">
-                      UPI Transaction ID <span className="text-muted-foreground font-normal">(Optional)</span>
-                    </Label>
-                    <Input
-                      id="transaction-id"
-                      placeholder="Enter UPI reference number (min 6 characters)"
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                      className="font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Found in your UPI app's payment success screen. Required for verification.
-                    </p>
-                  </div>
-
-                  {/* Step-by-step Instructions */}
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold">How to complete payment:</p>
-                    <div className="space-y-1.5 text-xs text-muted-foreground">
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">1</span>
-                        <span>Open any UPI app (Google Pay, PhonePe, Paytm, etc.)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">2</span>
-                        <span>Scan the QR code or enter the UPI ID manually</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">3</span>
-                        <span>Complete the payment and note your transaction ID</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">4</span>
-                        <span>Enter transaction ID above and click "I've Paid" below</span>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Instruction */}
+                  <p className="text-xs text-center text-muted-foreground bg-muted/50 p-2 rounded-lg">
+                    💡 Scan the QR code or copy the UPI ID to make payment. Your ticket will be generated and admin will verify.
+                  </p>
 
                   <Button
                     onClick={() => createTicket('upi')}
                     disabled={loading}
                     className="w-full mt-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 min-h-[48px]"
                   >
-                    {loading ? 'Processing...' : '✅ I\'ve Paid'}
+                    {loading ? 'Processing...' : '✅ I have made UPI Payment'}
                   </Button>
-
-                  {/* Contact Info */}
-                  <p className="text-xs text-center text-muted-foreground">
-                    💡 Call <span className="font-semibold text-primary">7507066880</span> to confirm or wait a few hours for verification
-                  </p>
                 </div>
 
                 {/* Divider */}

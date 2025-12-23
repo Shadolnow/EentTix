@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, Copy, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -25,6 +33,9 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
     });
     const [loading, setLoading] = useState(false);
     const [tiersLoaded, setTiersLoaded] = useState(false);
+    const [showUpiPayment, setShowUpiPayment] = useState(false);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [purchasedTickets, setPurchasedTickets] = useState<any[]>([]);
 
     // Load tiers
     const loadTiers = async () => {
@@ -122,6 +133,24 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                 throw new Error('Failed to create any tickets');
             }
 
+            // Send emails for created tickets (Fire and forget to avoid blocking UI significantly)
+            // We process them in parallel
+            Promise.allSettled(createdTickets.map(ticket =>
+                supabase.functions.invoke('send-ticket-email', {
+                    body: {
+                        to: formData.email,
+                        ticketCode: ticket.ticket_code,
+                        attendeeName: formData.name,
+                        eventTitle: event.title,
+                        eventDate: event.event_date,
+                        eventVenue: event.venue,
+                        ticketUrl: `${window.location.origin}/ticket/${ticket.id}`
+                    }
+                })
+            )).then(results => {
+                console.log('Email sending results:', results);
+            });
+
             // Success!
             toast.success(`🎉 ${createdTickets.length} tickets created successfully!`);
 
@@ -133,12 +162,13 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                 colors: ['#00E5FF', '#B400FF', '#FFFFFF']
             });
 
-            // Reset form
+            // Store tickets and show success dialog
+            setPurchasedTickets(createdTickets);
             setQuantities({});
             setFormData({ name: '', email: '', phone: '' });
+            setShowSuccessDialog(true);
 
-            // Callback with tickets
-            onSuccess(createdTickets);
+            // Note: We don't call onSuccess yet, we wait for user to close dialog
 
         } catch (error: any) {
             console.error('Bulk ticket error:', error);
@@ -166,157 +196,161 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
     return (
         <div className="space-y-6">
             {/* Customer Details */}
-            <Card>
-                <CardContent className="p-6 space-y-4">
-                    <h3 className="font-bold text-lg">Your Details</h3>
+            {!showUpiPayment && (
+                <Card>
+                    <CardContent className="p-6 space-y-4">
+                        <h3 className="font-bold text-lg">Your Details</h3>
 
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <div>
-                            <Label htmlFor="bulk-name">Full Name *</Label>
-                            <Input
-                                id="bulk-name"
-                                placeholder="John Doe"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            />
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <div>
+                                <Label htmlFor="bulk-name">Full Name *</Label>
+                                <Input
+                                    id="bulk-name"
+                                    placeholder="John Doe"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="bulk-email">Email *</Label>
+                                <Input
+                                    id="bulk-email"
+                                    type="email"
+                                    placeholder="john@example.com"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="bulk-phone">Phone *</Label>
+                                <Input
+                                    id="bulk-phone"
+                                    placeholder="+91 9876543210"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                            </div>
                         </div>
 
-                        <div>
-                            <Label htmlFor="bulk-email">Email *</Label>
-                            <Input
-                                id="bulk-email"
-                                type="email"
-                                placeholder="john@example.com"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="bulk-phone">Phone *</Label>
-                            <Input
-                                id="bulk-phone"
-                                placeholder="+91 9876543210"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            />
-                        </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">
-                        All tickets will be registered under this name and sent to this email.
-                    </p>
-                </CardContent>
-            </Card>
+                        <p className="text-xs text-muted-foreground">
+                            All tickets will be registered under this name and sent to this email.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Ticket Selection */}
-            <div className="space-y-4">
-                <h3 className="font-bold text-lg">Select Tickets</h3>
+            {!showUpiPayment && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-lg">Select Tickets</h3>
 
-                {tiers.map(tier => {
-                    const qty = quantities[tier.id] || 0;
-                    const available = tier.capacity ? tier.capacity - (tier.tickets_sold || 0) : 999;
+                    {tiers.map(tier => {
+                        const qty = quantities[tier.id] || 0;
+                        const available = tier.capacity ? tier.capacity - (tier.tickets_sold || 0) : 999;
 
-                    return (
-                        <Card key={tier.id}>
-                            <CardContent className="p-4">
-                                <div className="flex items-start justify-between gap-4">
-                                    {/* Tier Info */}
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h4 className="font-bold text-lg">{tier.name}</h4>
-                                            {tier.original_price && tier.original_price > tier.price && (
-                                                <Badge variant="secondary" className="bg-green-500/20 text-green-400">
-                                                    Save ₹{tier.original_price - tier.price}
-                                                </Badge>
-                                            )}
-                                        </div>
-
-                                        {tier.description && (
-                                            <p className="text-sm text-muted-foreground mb-2">{tier.description}</p>
-                                        )}
-
-                                        <div className="flex items-baseline gap-2">
-                                            {tier.original_price && (
-                                                <span className="text-sm line-through text-muted-foreground">₹{tier.original_price}</span>
-                                            )}
-                                            <span className="text-xl font-bold text-primary">₹{tier.price}</span>
-                                            <span className="text-xs text-muted-foreground">per ticket</span>
-                                        </div>
-
-                                        {available < 20 && available > 0 && (
-                                            <p className="text-xs text-amber-500 mt-1">Only {available} left!</p>
-                                        )}
-                                    </div>
-
-                                    {/* Quantity Controls */}
-                                    <div className="flex flex-col items-end gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                size="icon"
-                                                variant="outline"
-                                                className="h-9 w-9 rounded-full"
-                                                onClick={() => updateQuantity(tier.id, -1)}
-                                                disabled={qty === 0}
-                                            >
-                                                <Minus className="h-4 w-4" />
-                                            </Button>
-
-                                            <div className="w-16 text-center">
-                                                <Input
-                                                    type="number"
-                                                    min="0"
-                                                    max={Math.min(50, available)}
-                                                    value={qty}
-                                                    onChange={(e) => {
-                                                        const val = parseInt(e.target.value) || 0;
-                                                        setQuantities(prev => ({ ...prev, [tier.id]: Math.max(0, Math.min(50, val)) }));
-                                                    }}
-                                                    className="text-center text-lg font-bold h-9"
-                                                />
+                        return (
+                            <Card key={tier.id}>
+                                <CardContent className="p-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                        {/* Tier Info */}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="font-bold text-lg">{tier.name}</h4>
+                                                {tier.original_price && tier.original_price > tier.price && (
+                                                    <Badge variant="secondary" className="bg-green-500/20 text-green-400">
+                                                        Save ₹{tier.original_price - tier.price}
+                                                    </Badge>
+                                                )}
                                             </div>
 
-                                            <Button
-                                                size="icon"
-                                                variant="outline"
-                                                className="h-9 w-9 rounded-full"
-                                                onClick={() => updateQuantity(tier.id, 1)}
-                                                disabled={qty >= Math.min(50, available)}
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
+                                            {tier.description && (
+                                                <p className="text-sm text-muted-foreground mb-2">{tier.description}</p>
+                                            )}
 
-                                            {qty > 0 && (
+                                            <div className="flex items-baseline gap-2">
+                                                {tier.original_price && (
+                                                    <span className="text-sm line-through text-muted-foreground">₹{tier.original_price}</span>
+                                                )}
+                                                <span className="text-xl font-bold text-primary">₹{tier.price}</span>
+                                                <span className="text-xs text-muted-foreground">per ticket</span>
+                                            </div>
+
+                                            {available < 20 && available > 0 && (
+                                                <p className="text-xs text-amber-500 mt-1">Only {available} left!</p>
+                                            )}
+                                        </div>
+
+                                        {/* Quantity Controls */}
+                                        <div className="flex flex-col items-end gap-2">
+                                            <div className="flex items-center gap-2">
                                                 <Button
                                                     size="icon"
-                                                    variant="ghost"
-                                                    className="h-9 w-9"
-                                                    onClick={() => setQuantities(prev => {
-                                                        const { [tier.id]: removed, ...rest } = prev;
-                                                        return rest;
-                                                    })}
+                                                    variant="outline"
+                                                    className="h-9 w-9 rounded-full"
+                                                    onClick={() => updateQuantity(tier.id, -1)}
+                                                    disabled={qty === 0}
                                                 >
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                    <Minus className="h-4 w-4" />
                                                 </Button>
+
+                                                <div className="w-16 text-center">
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max={Math.min(50, available)}
+                                                        value={qty}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            setQuantities(prev => ({ ...prev, [tier.id]: Math.max(0, Math.min(50, val)) }));
+                                                        }}
+                                                        className="text-center text-lg font-bold h-9"
+                                                    />
+                                                </div>
+
+                                                <Button
+                                                    size="icon"
+                                                    variant="outline"
+                                                    className="h-9 w-9 rounded-full"
+                                                    onClick={() => updateQuantity(tier.id, 1)}
+                                                    disabled={qty >= Math.min(50, available)}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+
+                                                {qty > 0 && (
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-9 w-9"
+                                                        onClick={() => setQuantities(prev => {
+                                                            const { [tier.id]: removed, ...rest } = prev;
+                                                            return rest;
+                                                        })}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                )}
+                                            </div>
+
+                                            {qty > 0 && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-muted-foreground">Subtotal</p>
+                                                    <p className="text-lg font-bold">₹{tier.price * qty}</p>
+                                                </div>
                                             )}
                                         </div>
-
-                                        {qty > 0 && (
-                                            <div className="text-right">
-                                                <p className="text-xs text-muted-foreground">Subtotal</p>
-                                                <p className="text-lg font-bold">₹{tier.price * qty}</p>
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })}
-            </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Cart Summary & Checkout */}
-            {totalItems > 0 && (
+            {totalItems > 0 && !showUpiPayment && (
                 <Card className="sticky bottom-4 border-2 border-primary/30 shadow-2xl bg-gradient-to-r from-card to-primary/5">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between gap-4 mb-4">
@@ -332,7 +366,17 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                         {!event.is_free && (
                             <div className="grid gap-3 md:grid-cols-2">
                                 <Button
-                                    onClick={() => handlePurchase('upi')}
+                                    onClick={() => {
+                                        if (!formData.name || !formData.email || !formData.phone) {
+                                            toast.error('Please fill in all your details');
+                                            return;
+                                        }
+                                        if (totalItems === 0) {
+                                            toast.error('Please select at least one ticket');
+                                            return;
+                                        }
+                                        setShowUpiPayment(true);
+                                    }}
                                     disabled={loading}
                                     className="h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                                 >
@@ -363,7 +407,7 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                 </Card>
             )}
 
-            {totalItems === 0 && (
+            {totalItems === 0 && !showUpiPayment && (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <ShoppingCart className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
@@ -371,6 +415,150 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                     </CardContent>
                 </Card>
             )}
+
+            {/* UPI Payment Screen */}
+            {showUpiPayment && (
+                <Card className="border-2 border-green-500/30 shadow-2xl">
+                    <CardContent className="p-6 space-y-6">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                                    <span className="text-2xl">💳</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-xl">UPI Payment</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Total: ₹{total} for {totalItems} ticket{totalItems > 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowUpiPayment(false)}
+                            >
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </div>
+
+                        {/* QR Code */}
+                        {event.qr_code_url && (
+                            <div className="flex justify-center">
+                                <div className="relative group">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-xl rounded-2xl" />
+                                    <img
+                                        src={event.qr_code_url}
+                                        alt="UPI QR Code"
+                                        className="relative w-64 h-64 object-contain rounded-2xl border-2 border-border bg-white p-4"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* UPI ID */}
+                        {event.upi_id && (
+                            <div className="space-y-2">
+                                <Label className="text-sm font-semibold">Or pay using UPI ID</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={event.upi_id}
+                                        readOnly
+                                        className="font-mono text-base"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(event.upi_id);
+                                            toast.success('UPI ID copied!');
+                                        }}
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Instructions */}
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                            <p className="text-xs font-semibold">How to complete payment:</p>
+                            <div className="space-y-1.5 text-xs text-muted-foreground">
+                                <div className="flex items-start gap-2">
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">1</span>
+                                    <span>Open any UPI app (Google Pay, PhonePe, Paytm, etc.)</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">2</span>
+                                    <span>Scan the QR code or enter the UPI ID manually</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">3</span>
+                                    <span>Pay ₹{total} and complete the payment</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">4</span>
+                                    <span>Click "I've Paid" below to generate your tickets</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Confirm Button */}
+                        <Button
+                            onClick={() => handlePurchase('upi')}
+                            disabled={loading}
+                            className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                        >
+                            {loading ? 'Creating Tickets...' : '✅ I\'ve Paid - Create Tickets'}
+                        </Button>
+
+                        {/* Contact Info */}
+                        <p className="text-xs text-center text-muted-foreground">
+                            💡 Call <span className="font-semibold text-primary">7507066880</span> to confirm or wait for verification
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+            {/* Success Dialog */}
+            <Dialog open={showSuccessDialog} onOpenChange={(open) => {
+                if (!open && purchasedTickets.length > 0) {
+                    onSuccess(purchasedTickets);
+                }
+                setShowSuccessDialog(open);
+            }}>
+                <DialogContent className="sm:max-w-md border-2 border-primary/20">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl text-center text-primary">🎉 Order Placed Successfully!</DialogTitle>
+                        <DialogDescription className="text-center pt-2 text-base">
+                            YOU will receive confirmation of your ticket purchase soon.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-3 text-center">
+                            <p className="font-medium text-foreground">
+                                For immediate confirmation, you can call us at:
+                            </p>
+                            <a href="tel:7507066880" className="text-2xl font-bold text-primary hover:underline block">
+                                7507066880
+                            </a>
+                        </div>
+
+                        <div className="p-3 border border-yellow-500/20 bg-yellow-500/10 rounded-lg flex gap-3 text-sm text-yellow-600 dark:text-yellow-400">
+                            <span className="text-xl">💡</span>
+                            <p>Please keep your ticket and UPI reference details with you for verification.</p>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="sm:justify-center">
+                        <Button
+                            className="w-full sm:w-auto min-w-[150px]"
+                            onClick={() => onSuccess(purchasedTickets)}
+                        >
+                            Okay, Got it
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

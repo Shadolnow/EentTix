@@ -1,0 +1,29 @@
+// EXACT CODE TO REPLACE LINES 761-762
+
+// CURRENT (Lines 761-762):
+              </Card>
+            )}
+          </div>
+
+// REPLACE WITH:
+              </Card>
+            </TabsContent>
+
+            {/* Bulk Ticket Tab */}
+            <TabsContent value="bulk">
+              <BulkTicketTab
+                eventId={eventId!}
+                event={event}
+                onSuccess={(tickets) => {
+                  if (tickets.length > 0) {
+                    setClaimedTicket({
+                      ...tickets[0],
+                      events: event
+                    });
+                  }
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+          </div>

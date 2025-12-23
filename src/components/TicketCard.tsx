@@ -42,12 +42,13 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
 
     try {
       const canvas = await html2canvas(ticketRef.current, {
-        backgroundColor: null,
+        backgroundColor: null, // Transparent background for the PNG
         scale: 3,
+        logging: false,
       });
       const link = document.createElement("a");
-      link.download = `EventTix-${ticket.ticket_code}.png`;
-      link.href = canvas.toDataURL();
+      link.download = `Ticket-LIVE-${ticket.ticket_code}.png`;
+      link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success("Ticket downloaded!");
     } catch (error) {
@@ -70,16 +71,11 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
       });
       canvas.toBlob(async (blob) => {
         if (blob && navigator.share) {
-          const file = new File([blob], `EventTix-${ticket.ticket_code}.png`, { type: "image/png" });
+          const file = new File([blob], `Ticket-${ticket.ticket_code}.png`, { type: "image/png" });
           await navigator.share({
             title: `${ticket.events.title} Ticket`,
-            text: `My ticket for ${ticket.events.title}!`,
+            text: `LIVE: ${ticket.events.title} Ticket Code: ${ticket.ticket_code}`,
             files: [file],
-          });
-        } else if (navigator.share) {
-          await navigator.share({
-            title: `${ticket.events.title} Ticket`,
-            text: `Check out my ticket for ${ticket.events.title}! Code: ${ticket.ticket_code}`,
           });
         } else {
           await navigator.clipboard.writeText(`Ticket for ${ticket.events.title}\nCode: ${ticket.ticket_code}`);
@@ -95,151 +91,140 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
   const tierName = ticket.tier_name || ticket.ticket_tiers?.name || 'GENERAL ADMISSION';
 
   return (
-    <div className="space-y-4">
-      <Card ref={ticketRef} className="relative overflow-hidden border-0 shadow-2xl">
-        {/* Main Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" />
+    <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+      {/* THE TICKET */}
+      <div
+        ref={ticketRef}
+        className="relative w-full max-w-[380px] mx-auto overflow-hidden rounded-[2rem] font-sans text-white shadow-2xl transition-transform hover:scale-[1.01]"
+        style={{
+          background: '#050505', // Deep dark background
+          boxShadow: '0 0 40px rgba(139, 92, 246, 0.15), 0 0 20px rgba(0, 229, 255, 0.1)'
+        }}
+      >
+        {/* === Background Effects === */}
+        {/* Cyan Glow - Top Left */}
+        <div className="absolute top-[-20%] left-[-30%] w-[80%] h-[50%] bg-[#00E5FF] rounded-full blur-[120px] opacity-20" />
+        {/* Purple/Pink Glow - Bottom Right */}
+        <div className="absolute bottom-[-20%] right-[-30%] w-[80%] h-[50%] bg-[#d946ef] rounded-full blur-[120px] opacity-20" />
 
-        {/* Animated Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 animate-gradient" />
+        {/* Tech Lines / Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
+            backgroundSize: '30px 30px'
+          }}
+        />
 
-        {/* Noise Texture */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'4\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' /%3E%3C/svg%3E")'
-        }} />
+        {/* Subtle Noise */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+        />
 
-        <div className="relative">
-          {/* Header Section */}
-          <div className="relative px-6 pt-6 pb-4">
-            {/* Tier Badge - Top Right */}
-            <div className="absolute top-6 right-6">
-              <Badge className="px-4 py-1.5 text-xs font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 text-white border-0 shadow-lg shadow-cyan-500/50">
-                <Ticket className="w-3 h-3 mr-1" />
+        {/* === Main Content Section === */}
+        <div className="relative p-8 pb-10 z-10">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-8 filter drop-shadow-lg">
+            <div className="space-y-2">
+              <Badge variant="outline" className="border-[#00E5FF] text-[#00E5FF] bg-[#00E5FF]/5 tracking-widest text-[10px] py-0.5 px-2">
                 {tierName}
               </Badge>
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-slate-300">
+                {ticket.events.title}
+              </h2>
             </div>
 
-            {/* Event Title */}
-            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-purple-200 mb-1 pr-32">
-              {ticket.events.title}
-            </h2>
+            {/* Status Indicator */}
+            <div className={`w-3 h-3 rounded-full shadow-[0_0_10px] ${ticket.is_validated ? 'bg-green-500 shadow-green-500' : 'bg-[#00E5FF] shadow-[#00E5FF] animate-pulse'}`} />
+          </div>
 
-            {/* Attendee Name */}
-            <p className="text-lg font-semibold text-cyan-100">{ticket.attendee_name}</p>
+          {/* Event Info Grid */}
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 group">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center flex-shrink-0 group-hover:border-[#00E5FF]/50 transition-colors">
+                <Calendar className="w-6 h-6 text-[#00E5FF]" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-medium mb-1">Date</p>
+                <p className="font-bold text-lg leading-none">{format(new Date(ticket.events.event_date), 'MMM dd')}</p>
+                <p className="text-sm text-slate-300 mt-1">{format(new Date(ticket.events.event_date), 'EEEE • h:mm a')}</p>
+              </div>
+            </div>
 
-            {/* Validation Status */}
-            {ticket.is_validated && (
-              <div className="absolute top-6 left-6">
-                <div className="px-3 py-1 rounded-full bg-green-500/20 border border-green-400/50 text-green-300 text-xs font-bold backdrop-blur-sm">
-                  ✓ VALIDATED
-                </div>
+            <div className="flex items-start gap-4 group">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center flex-shrink-0 group-hover:border-[#d946ef]/50 transition-colors">
+                <MapPin className="w-6 h-6 text-[#d946ef]" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-medium mb-1">Venue</p>
+                <p className="font-bold text-lg leading-tight line-clamp-2">{ticket.events.venue}</p>
+              </div>
+            </div>
+
+            {/* Attendee Strip */}
+            {ticket.attendee_name && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">Attendee</p>
+                <p className="text-xl font-mono text-[#00E5FF] tracking-widest uppercase truncate">{ticket.attendee_name}</p>
               </div>
             )}
           </div>
-
-          {/* Event Details */}
-          <div className="px-6 pb-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-300">
-              <Calendar className="w-4 h-4 text-cyan-400" />
-              <span className="font-medium">{format(new Date(ticket.events.event_date), 'PPP p')}</span>
-            </div>
-            <div className="flex items-start gap-2 text-sm text-slate-300">
-              <MapPin className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
-              <span className="font-medium">{ticket.events.venue}</span>
-            </div>
-          </div>
-
-          {/* Divider with Glow */}
-          <div className="relative px-6">
-            <div className="h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
-            <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent blur-sm" />
-          </div>
-
-          {/* QR Codes Section */}
-          <div className="px-6 py-6">
-            <div className="grid grid-cols-2 gap-6">
-              {/* Ticket QR */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative">
-                  {/* Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-2xl blur-xl opacity-50" />
-
-                  {/* QR Container */}
-                  <div className="relative p-4 rounded-2xl bg-white shadow-xl">
-                    <QRCodeSVG
-                      value={ticket.ticket_code}
-                      size={compact ? 100 : 120}
-                      level="H"
-                      includeMargin={false}
-                    />
-                  </div>
-                </div>
-
-                {/* Ticket Code */}
-                <div className="text-center">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Ticket Code</p>
-                  <p className="text-xs font-bold tracking-widest text-cyan-300 font-mono">
-                    {ticket.ticket_code}
-                  </p>
-                </div>
-              </div>
-
-              {/* Venue QR */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative">
-                  {/* Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl blur-xl opacity-50" />
-
-                  {/* QR Container */}
-                  <div className="relative">
-                    <LocationQR
-                      address={ticket.events.venue}
-                      size={compact ? 100 : 120}
-                      showLabel={false}
-                    />
-                  </div>
-                </div>
-
-                {/* Location Label */}
-                <div className="text-center">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Venue Location</p>
-                  <p className="text-xs font-semibold text-pink-300 flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    Get Directions
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Gradient */}
-          <div className="h-2 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500" />
         </div>
-      </Card>
+
+        {/* === The Tear Line with Notches === */}
+        <div className="relative h-px bg-transparent">
+          {/* The visually dashed line */}
+          <div className="absolute top-0 left-6 right-6 border-b-2 border-dashed border-[#ffffff]/20" />
+
+          {/* Left Notch */}
+          <div className="absolute top-1/2 left-[-12px] -translate-y-1/2 w-6 h-6 rounded-full bg-background shadow-inner border-r border-white/5" />
+
+          {/* Right Notch */}
+          <div className="absolute top-1/2 right-[-12px] -translate-y-1/2 w-6 h-6 rounded-full bg-background shadow-inner border-l border-white/5" />
+        </div>
+
+        {/* === Stub Section (QR) === */}
+        <div className="relative p-8 pt-10 z-10 flex flex-col items-center">
+          <div className="relative group cursor-pointer">
+            {/* Glowing Border for QR */}
+            <div className="absolute -inset-1 bg-gradient-to-tr from-[#00E5FF] via-[#8A2BE2] to-[#FF00FF] rounded-2xl opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-500" />
+
+            <div className="relative p-3 bg-white rounded-xl overflow-hidden">
+              <QRCodeSVG value={ticket.ticket_code} size={compact ? 130 : 160} level="Q" />
+            </div>
+          </div>
+
+          <div className="text-center mt-6 space-y-1">
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.4em]">Code</p>
+            <p className="font-mono text-2xl font-black text-white tracking-[0.2em]">{ticket.ticket_code}</p>
+          </div>
+
+          {/* Bottom Decoration */}
+          <div className="mt-8 flex items-center gap-2 opacity-30 w-full justify-center">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className={`h-1 rounded-full bg-white ${i % 2 === 0 ? 'w-1' : 'w-4'}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* Neon Footer Line */}
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#00E5FF] via-[#8A2BE2] to-[#FF00FF]" />
+      </div>
 
       {/* Action Buttons */}
       {showActions && (
-        <div className="flex gap-3 no-print">
+        <div className="flex gap-3 max-w-[380px] mx-auto no-print">
           <Button
             onClick={handleDownload}
             variant="outline"
-            className="flex-1 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400"
+            className="flex-1 bg-black/20 border-white/10 text-slate-300 hover:bg-[#00E5FF]/10 hover:text-[#00E5FF] hover:border-[#00E5FF]/30 transition-all"
           >
             <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
-          <Button
-            onClick={handlePrint}
-            variant="outline"
-            className="flex-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:border-purple-400"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
+            Save
           </Button>
           <Button
             onClick={handleShare}
             variant="outline"
-            className="flex-1 border-pink-500/30 text-pink-400 hover:bg-pink-500/10 hover:border-pink-400"
+            className="flex-1 bg-black/20 border-white/10 text-slate-300 hover:bg-[#d946ef]/10 hover:text-[#d946ef] hover:border-[#d946ef]/30 transition-all"
           >
             <Share2 className="mr-2 h-4 w-4" />
             Share
