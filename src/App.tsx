@@ -41,6 +41,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const GlobalTickets = lazy(() => import("./pages/GlobalTickets"));
 const AllTicketsPage = lazy(() => import("./pages/AllTicketsPage"));
 const DoorStaffScanner = lazy(() => import("./pages/DoorStaffScanner"));
+const MyTickets = lazy(() => import("./pages/MyTickets"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const AnimatedRoutes = () => {
           <Route path="/e/:eventId" element={<PageTransition><PublicEvent /></PageTransition>} />
           <Route path="/public-events" element={<PageTransition><PublicEvents /></PageTransition>} />
           <Route path="/ticket/:ticketId" element={<PageTransition><TicketViewer /></PageTransition>} />
+          <Route path="/my-tickets" element={<PageTransition><MyTickets /></PageTransition>} />
 
           {/* Protected Routes */}
           <Route path="/create-event" element={<AuthRoute><PageTransition><CreateEvent /></PageTransition></AuthRoute>} />
