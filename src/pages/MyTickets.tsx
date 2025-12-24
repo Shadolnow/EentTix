@@ -34,8 +34,7 @@ const MyTickets = () => {
             // First check if tickets exist for this email/phone
             let query = supabase
                 .from('tickets')
-                .select('id')
-                .is('deleted_at', null);
+                .select('id');
 
             if (email) {
                 query = query.eq('attendee_email', email.toLowerCase());
@@ -125,7 +124,6 @@ const MyTickets = () => {
             let query = supabase
                 .from('tickets')
                 .select('*, events(*), ticket_tiers(*)')
-                .is('deleted_at', null)
                 .order('created_at', { ascending: false });
 
             if (email) {
