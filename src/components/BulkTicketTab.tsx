@@ -99,6 +99,10 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
 
             // Generate a unique batch ID for this bulk purchase
             const batchId = crypto.randomUUID();
+
+            // Generate a security PIN for this batch (same PIN for all tickets in one purchase)
+            const securityPin = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit PIN
+
             let ticketNumberInBatch = 1;
 
             // Create tickets for each tier quantity
@@ -126,7 +130,9 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                             // Batch tracking fields
                             batch_id: batchId,
                             quantity_in_batch: totalItems,
-                            ticket_number_in_batch: ticketNumberInBatch++
+                            ticket_number_in_batch: ticketNumberInBatch++,
+                            // SECURITY: Add PIN for 3-factor retrieval verification
+                            security_pin: securityPin
                         })
                         .select()
                         .single();
@@ -209,6 +215,19 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                 spread: 70,
                 origin: { y: 0.6 },
                 colors: ['#00E5FF', '#B400FF', '#FFFFFF']
+            });
+
+            // IMPORTANT: Display Security PIN to user
+            toast.success(`🔒 Security PIN: ${securityPin}`, {
+                description: 'SAVE THIS PIN! You need it along with your email and phone to retrieve tickets.',
+                duration: 15000, // Show for 15 seconds
+                action: {
+                    label: 'Copy PIN',
+                    onClick: () => {
+                        navigator.clipboard.writeText(securityPin);
+                        toast.success('PIN copied to clipboard!');
+                    }
+                }
             });
 
             // Store tickets and show success dialog

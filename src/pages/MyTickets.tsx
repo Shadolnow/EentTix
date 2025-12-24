@@ -6,19 +6,30 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { TicketCard } from '@/components/TicketCard';
 import { toast } from 'sonner';
-import { Mail, Phone, Search, Ticket as TicketIcon } from 'lucide-react';
+import { Mail, Phone, Search, Ticket as TicketIcon, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const MyTickets = () => {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
+    const [pin, setPin] = useState('');
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
 
     const handleSearch = async () => {
-        if (!email && !phone) {
-            toast.error('Please enter email or phone number');
+        // Require ALL 3 factors for security
+        if (!email || !phone || !pin) {
+            toast.error('All fields required for security', {
+                description: 'Enter email, phone number, AND security PIN'
+            });
+            return;
+        }
+
+        if (pin.length < 4) {
+            toast.error('Invalid PIN', {
+                description: 'PIN must be at least 4 digits'
+            });
             return;
         }
 
@@ -26,32 +37,30 @@ const MyTickets = () => {
         setSearched(true);
 
         try {
-            let query = supabase
+            // 3-FACTOR VERIFICATION QUERY
+            const { data, error } = await supabase
                 .from('tickets')
                 .select('*, events(*), ticket_tiers(*)')
+                .eq('attendee_email', email.toLowerCase())
+                .eq('attendee_phone', phone)
+                .eq('security_pin', pin)
                 .order('created_at', { ascending: false });
-
-            if (email) {
-                query = query.eq('attendee_email', email.toLowerCase());
-            } else if (phone) {
-                query = query.eq('attendee_phone', phone);
-            }
-
-            console.log('🔍 Searching for tickets...');
-            const { data, error } = await query;
 
             if (error) {
                 console.error('Query error:', error);
                 throw error;
             }
 
-            console.log('📊 Found tickets:', data);
             setTickets(data || []);
 
             if (data && data.length > 0) {
-                toast.success(`Found ${data.length} ticket${data.length > 1 ? 's' : ''}!`);
+                toast.success(`✓ Verified! Found ${data.length} ticket${data.length > 1 ? 's' : ''}`, {
+                    description: '3-factor authentication successful'
+                });
             } else {
-                toast.info('No tickets found with this information');
+                toast.error('No tickets found or invalid credentials', {
+                    description: 'Verify your email, phone, and PIN are correct'
+                });
             }
         } catch (error) {
             console.error('Error fetching tickets:', error);
@@ -66,70 +75,108 @@ const MyTickets = () => {
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-bold text-gradient-cyber">My Tickets</h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <Lock className="w-8 h-8 text-primary" />
+                        <h1 className="text-4xl font-bold text-gradient-cyber">My Tickets</h1>
+                    </div>
                     <p className="text-muted-foreground">
-                        Enter your email or phone number to retrieve your tickets
+                        Secure 3-factor verification required
                     </p>
                 </div>
+
+                {/* Security Info Banner */}
+                <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="pt-6">
+                        <div className="flex items-start gap-3">
+                            <Lock className="w-5 h-5 text-primary mt-0.5" />
+                            <div className="space-y-1">
+                                <p className="font-semibold text-sm">Enhanced Security Protection</p>
+                                <p className="text-xs text-muted-foreground">
+                                    For your protection, ticket retrieval requires verification with email, phone number, AND security PIN.
+                                    Your PIN was provided when you purchased your tickets.
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Search Form */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Search className="w-5 h-5" />
-                            Find Your Tickets
+                            Secure Ticket Retrieval
                         </CardTitle>
                         <CardDescription>
-                            Use the email or phone number you provided when claiming your tickets
+                            Enter ALL three details to access your tickets
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Email */}
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="your@email.com"
-                                        value={email}
-                                        onChange={(e) => {
-                                            setEmail(e.target.value);
-                                            setPhone('');
-                                        }}
-                                        className="pl-10"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    />
-                                </div>
+                                <Label htmlFor="email" className="flex items-center gap-2">
+                                    <Mail className="w-4 h-4" />
+                                    Email Address *
+                                </Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    required
+                                />
                             </div>
 
+                            {/* Phone */}
                             <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="1234567890"
-                                        value={phone}
-                                        onChange={(e) => {
-                                            setPhone(e.target.value);
-                                            setEmail('');
-                                        }}
-                                        className="pl-10"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    />
-                                </div>
+                                <Label htmlFor="phone" className="flex items-center gap-2">
+                                    <Phone className="w-4 h-4" />
+                                    Phone Number *
+                                </Label>
+                                <Input
+                                    id="phone"
+                                    type="tel"
+                                    placeholder="1234567890"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    required
+                                />
                             </div>
+                        </div>
+
+                        {/* PIN - Full Width */}
+                        <div className="space-y-2">
+                            <Label htmlFor="pin" className="flex items-center gap-2">
+                                <Lock className="w-4 h-4 text-primary" />
+                                Security PIN *
+                            </Label>
+                            <Input
+                                id="pin"
+                                type="password"
+                                placeholder="Enter your 4-6 digit PIN"
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                maxLength={6}
+                                className="text-center text-lg tracking-widest font-mono"
+                                required
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                🔒 Your security PIN was provided when you purchased tickets
+                            </p>
                         </div>
 
                         <Button
                             onClick={handleSearch}
-                            disabled={loading || (!email && !phone)}
+                            disabled={loading || !email || !phone || !pin}
                             className="w-full"
+                            size="lg"
                         >
-                            {loading ? 'Searching...' : 'Find My Tickets'}
+                            {loading ? 'Verifying...' : '🔓 Verify & Access Tickets'}
                         </Button>
                     </CardContent>
                 </Card>
@@ -139,20 +186,31 @@ const MyTickets = () => {
                     <div className="space-y-4">
                         {tickets.length === 0 ? (
                             <Card className="p-12 text-center">
-                                <TicketIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-xl font-semibold mb-2">No Tickets Found</h3>
+                                <Lock className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                                <h3 className="text-xl font-semibold mb-2">Verification Failed</h3>
                                 <p className="text-muted-foreground mb-4">
-                                    We couldn't find any tickets with the information provided.
+                                    No tickets found with the provided credentials.
                                 </p>
-                                <p className="text-sm text-muted-foreground">
-                                    Make sure you're using the same email or phone number you used when claiming your tickets.
-                                </p>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                    <p>Please verify:</p>
+                                    <ul className="list-disc list-inside">
+                                        <li>Email matches what you used at purchase</li>
+                                        <li>Phone number is exactly as entered</li>
+                                        <li>Security PIN is correct</li>
+                                    </ul>
+                                </div>
                             </Card>
                         ) : (
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-bold">
-                                    Your Tickets ({tickets.length})
-                                </h2>
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                                        <TicketIcon className="w-6 h-6 text-primary" />
+                                        Your Tickets ({tickets.length})
+                                    </h2>
+                                    <div className="text-sm text-muted-foreground bg-green-500/10 text-green-600 px-3 py-1.5 rounded-full">
+                                        ✓ Verified Secure
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 gap-6">
                                     {tickets.map((ticket) => (
                                         <TicketCard
