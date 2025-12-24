@@ -43,14 +43,25 @@ const MyTickets = () => {
                 query = query.eq('attendee_phone', phone);
             }
 
-            const { data: ticketCheck } = await query;
+            console.log('🔍 Searching for tickets with:', email ? `email: ${email.toLowerCase()}` : `phone: ${phone}`);
+
+            const { data: ticketCheck, error: checkError } = await query;
+
+            console.log('📊 Query results:', { ticketCheck, checkError });
+
+            if (checkError) {
+                console.error('❌ Query error:', checkError);
+                throw checkError;
+            }
 
             if (!ticketCheck || ticketCheck.length === 0) {
+                console.warn('⚠️ No tickets found in database');
                 toast.error('No tickets found with this information');
                 setLoading(false);
                 return;
             }
 
+            console.log(`✅ Found ${ticketCheck.length} tickets, sending OTP...`);
             // Send OTP via Supabase functions
             const { error } = await supabase.functions.invoke('send-otp', {
                 body: {
