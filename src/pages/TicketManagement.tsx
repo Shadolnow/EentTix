@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TicketCard } from '@/components/TicketCard';
 import { AttendeeList } from '@/components/AttendeeList';
@@ -15,10 +15,12 @@ import { EventStats } from '@/components/EventStats';
 import { EventCustomization } from '@/components/EventCustomization';
 import { toast } from 'sonner';
 import { getUserFriendlyError } from '@/lib/errorHandler';
-import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2, CreditCard, CheckCircle2, AlertCircle, ScanLine, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Ticket as TicketIcon, Users, Settings, Printer, Download, Share2, CreditCard, CheckCircle2, AlertCircle, ScanLine, Clock, Trash2, Archive, UserPlus } from 'lucide-react';
 import { z } from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WaitlistManager } from '@/components/WaitlistManager';
+import { BulkDeleteDialog } from '@/components/BulkDeleteDialog';
+import { DoorStaffManager } from '@/components/DoorStaffManager';
 
 const attendeeSchema = z.object({
   name: z.string().trim().min(1, { message: 'Name is required' }).max(100),
@@ -517,7 +519,7 @@ const TicketManagement = () => {
             />
 
             <Tabs defaultValue="tickets" className="space-y-6">
-              <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-5 h-auto">
+              <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-7 h-auto">
                 <TabsTrigger value="tickets">
                   <TicketIcon className="w-4 h-4 mr-2" />
                   Tickets
@@ -529,6 +531,14 @@ const TicketManagement = () => {
                 <TabsTrigger value="waitlist">
                   <Clock className="w-4 h-4 mr-2" />
                   Waitlist
+                </TabsTrigger>
+                <TabsTrigger value="door-staff">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Door Staff
+                </TabsTrigger>
+                <TabsTrigger value="bulk-actions">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Archive
                 </TabsTrigger>
                 <TabsTrigger value="customize">
                   <Settings className="w-4 h-4 mr-2" />
@@ -647,6 +657,71 @@ const TicketManagement = () => {
 
               <TabsContent value="waitlist">
                 <WaitlistManager eventId={eventId!} />
+              </TabsContent>
+
+              <TabsContent value="door-staff">
+                <DoorStaffManager eventId={eventId!} />
+              </TabsContent>
+
+              <TabsContent value="bulk-actions">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Archive className="w-5 h-5 text-primary" />
+                          Archive & Bulk Actions
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          View archived tickets and access bulk management tools
+                        </CardDescription>
+                      </div>
+                      <Button onClick={() => navigate('/admin/archive')}>
+                        <Archive className="w-4 h-4 mr-2" />
+                        Open Archive
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <h3 className="font-semibold text-blue-900 mb-2">📦 Ticket Archive</h3>
+                        <p className="text-sm text-blue-800 mb-4">
+                          Deleted tickets are safely stored for 14 days before permanent deletion.
+                          Visit the Archive page to view and restore tickets.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="bg-white rounded p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Features:</p>
+                            <ul className="text-xs space-y-1">
+                              <li>✓ 14-day retention</li>
+                              <li>✓ One-click restore</li>
+                              <li>✓ Audit trail</li>
+                            </ul>
+                          </div>
+                          <div className="bg-white rounded p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Operations:</p>
+                            <ul className="text-xs space-y-1">
+                              <li>• View all archived</li>
+                              <li>• Restore tickets</li>
+                              <li>• Permanent delete</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                        <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Bulk Delete (Coming Soon)</h3>
+                        <p className="text-sm text-yellow-800 mb-4">
+                          Select multiple tickets from the Tickets tab and use bulk actions to archive them safely.
+                        </p>
+                        <p className="text-xs text-yellow-700">
+                          💡 Tip: For now, use the Archive page to manage deleted tickets. Bulk selection is being implemented.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
