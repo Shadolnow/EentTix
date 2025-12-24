@@ -7,6 +7,7 @@ import heroImage from '@/assets/eventtix-hero.jpg';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { cn } from '@/lib/utils';
 import { ModeToggle } from '@/components/mode-toggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -73,6 +74,8 @@ const Index = () => {
                     <QrCode className="w-5 h-5" />
                   </Button>
                 </Link>
+                <LanguageSelector />
+                <ModeToggle />
                 <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-destructive">
                   <LogOut className="w-5 h-5" />
                 </Button>
