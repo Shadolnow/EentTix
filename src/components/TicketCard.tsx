@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Download, Share2, Calendar, MapPin, User, Ticket as TicketIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
+import '@/styles/premium-animations.css';
 
 interface TicketCardProps {
   ticket: any;
@@ -86,96 +87,174 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
 
   return (
     <div className="space-y-4">
-      {/* Premium Ticket Design */}
+      {/* Ultra Premium Security Ticket Design */}
       <div
         ref={ticketRef}
-        className="relative w-full max-w-md mx-auto overflow-hidden rounded-2xl"
+        className="relative w-full max-w-md mx-auto overflow-hidden rounded-3xl"
         style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          boxShadow: '0 20px 60px rgba(102, 126, 234, 0.4)',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #7c3aed 50%, #db2777 100%)',
+          boxShadow: '0 30px 80px rgba(124, 58, 237, 0.5), 0 0 40px rgba(219, 39, 119, 0.3)',
         }}
       >
-        {/* Decorative Pattern Overlay */}
-        <div className="absolute inset-0 opacity-10"
+        {/* Holographic Animated Background */}
+        <div
+          className="absolute inset-0 opacity-30 animate-pulse"
           style={{
-            backgroundImage: `radial-gradient(circle at 20px 20px, white 2px, transparent 0)`,
+            background: `
+              linear-gradient(45deg, transparent 30%, rgba(0, 229, 255, 0.3) 50%, transparent 70%),
+              linear-gradient(-45deg, transparent 30%, rgba(180, 0, 255, 0.3) 50%, transparent 70%)
+            `,
+            backgroundSize: '200% 200%',
+            animation: 'holographic 8s ease-in-out infinite',
+          }}
+        />
+
+        {/* Guilloche Security Pattern (Anti-Copy) */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(45deg, transparent, transparent 2px, white 2px, white 4px),
+              repeating-linear-gradient(-45deg, transparent, transparent 2px, white 2px, white 4px)
+            `,
+          }}
+        />
+
+        {/* Radial Dot Pattern Watermark */}
+        <div className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20px 20px, white 3px, transparent 0)`,
             backgroundSize: '40px 40px'
           }}
         />
 
+        {/* Event Logo Watermark (Repeating) */}
+        <div
+          className="absolute inset-0 opacity-5 flex items-center justify-center"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50' y='50' text-anchor='middle' dominant-baseline='middle' font-size='12' fill='white' opacity='0.3'%3EAUTHENTIC%3C/text%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '120px 120px',
+          }}
+        />
+
+        {/* Dynamic Timestamp Security Feature (Updates every second) */}
+        <div className="absolute top-2 right-2 text-[8px] font-mono text-white/30">
+          {new Date().toLocaleTimeString()}
+        </div>
+
+        {/* Security Badge - Top Left */}
+        <div className="absolute top-4 left-4 flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-full border border-white/30">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <span className="text-[10px] font-bold text-white tracking-wider">VERIFIED</span>
+        </div>
+
+        {/* Animated Security Strip */}
+        <div
+          className="absolute top-16 left-0 right-0 h-1 opacity-50"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.8) 50%, transparent 100%)',
+            animation: 'securitySweep 4s linear infinite',
+          }}
+        />
+
         <div className="relative p-8 text-white">
-          {/* Header Section */}
+          {/* Header Section with Metallic Effect */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
-              <TicketIcon className="w-5 h-5" />
-              <span className="text-xs font-semibold tracking-widest uppercase opacity-90">
-                Live Event Ticket
+              <TicketIcon className="w-5 h-5 drop-shadow-lg" />
+              <span className="text-xs font-bold tracking-widest uppercase opacity-90 bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent">
+                Premium Event Ticket
               </span>
             </div>
-            <h1 className="text-2xl font-bold mb-1 leading-tight">
+            <h1 className="text-3xl font-black mb-1 leading-tight drop-shadow-2xl bg-gradient-to-br from-white via-cyan-100 to-white bg-clip-text text-transparent">
               {ticket.events.title}
             </h1>
-            <p className="text-sm opacity-90 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4" />
+            <p className="text-sm opacity-90 flex items-center gap-1.5 font-medium">
+              <Calendar className="w-4 h-4 drop-shadow-md" />
               {format(new Date(ticket.events.event_date), 'PPP • p')}
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="w-full h-px bg-white/20 my-6" />
+          {/* Holographic Divider with Gradient */}
+          <div
+            className="w-full h-0.5 my-6"
+            style={{
+              background: 'linear-gradient(90deg, transparent, white, transparent)',
+              boxShadow: '0 0 10px rgba(255,255,255,0.5)',
+            }}
+          />
 
-          {/* Ticket Details Grid */}
+          {/* Ticket Details Grid with Enhanced Styling */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-xs opacity-70 mb-1">Attendee</p>
-              <p className="font-semibold flex items-center gap-1.5">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+              <p className="text-xs opacity-70 mb-1 font-semibold uppercase tracking-wide">Attendee</p>
+              <p className="font-bold flex items-center gap-1.5 text-sm">
                 <User className="w-4 h-4" />
                 {ticket.attendee_name}
               </p>
             </div>
-            <div>
-              <p className="text-xs opacity-70 mb-1">Venue</p>
-              <p className="font-semibold flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" />
-                {ticket.events.venue}
-              </p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+              <p className="text-xs opacity-70 mb-1 font-semibold uppercase tracking-wide">Venue</p>
+              {ticket.events.venue?.startsWith('http') ? (
+                <a
+                  href={ticket.events.venue}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold flex items-center gap-1.5 text-cyan-200 hover:text-cyan-100 text-sm"
+                >
+                  <MapPin className="w-4 h-4" />
+                  View Map
+                </a>
+              ) : (
+                <p className="font-bold flex items-center gap-1.5 text-sm">
+                  <MapPin className="w-4 h-4" />
+                  {ticket.events.venue}
+                </p>
+              )}
             </div>
-            <div>
-              <p className="text-xs opacity-70 mb-1">Ticket Type</p>
-              <p className="font-semibold text-sm">{tierName}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+              <p className="text-xs opacity-70 mb-1 font-semibold uppercase tracking-wide">Ticket Type</p>
+              <p className="font-bold text-sm bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">{tierName}</p>
             </div>
-            <div>
-              <p className="text-xs opacity-70 mb-1">Status</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+              <p className="text-xs opacity-70 mb-1 font-semibold uppercase tracking-wide">Status</p>
               <Badge
                 variant={ticket.is_validated ? "default" : "secondary"}
-                className={ticket.is_validated ? "bg-green-500" : "bg-yellow-500"}
+                className={`${ticket.is_validated ? "bg-green-500 shadow-lg shadow-green-500/50" : "bg-yellow-500 shadow-lg shadow-yellow-500/50"} font-bold border-2 border-white/50`}
               >
-                {ticket.is_validated ? "✓ Validated" : "Active"}
+                {ticket.is_validated ? "✓ Validated" : "⭐ Active"}
               </Badge>
             </div>
           </div>
 
-          {/* QR Code Section */}
-          <div className="flex items-center justify-between gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+          {/* QR Code Section with Premium Border */}
+          <div className="flex items-center justify-between gap-4 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-md rounded-2xl p-5 border-2 border-white/40 shadow-2xl">
             <div className="flex-1">
-              <p className="text-xs opacity-70 mb-1">Ticket Code</p>
-              <p className="font-mono font-bold text-lg tracking-wider">
+              <p className="text-xs opacity-70 mb-1 font-semibold uppercase tracking-wide">Ticket Code</p>
+              <p className="font-mono font-black text-xl tracking-wider drop-shadow-lg" style={{
+                textShadow: '0 0 20px rgba(255,255,255,0.5)',
+              }}>
                 {ticket.ticket_code}
               </p>
               {ticket.batch_id && ticket.quantity_in_batch > 1 && (
-                <Badge variant="outline" className="mt-2 border-white/30 text-white">
+                <Badge variant="outline" className="mt-2 border-white/40 text-white bg-white/10 backdrop-blur-sm font-bold">
                   {ticket.ticket_number_in_batch} of {ticket.quantity_in_batch}
                 </Badge>
               )}
             </div>
-            <div className="bg-white p-3 rounded-lg">
-              <QRCodeSVG
-                value={`https://eventtix-psi.vercel.app/validate/${ticket.ticket_code}`}
-                size={80}
-                level="H"
-                fgColor="#000000"
-                bgColor="#FFFFFF"
-              />
+            <div className="relative">
+              {/* Animated Glow Border */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-lg blur opacity-75 animate-pulse" />
+              <div className="relative bg-white p-3 rounded-lg">
+                <QRCodeSVG
+                  value={`https://eventtix-psi.vercel.app/validate/${ticket.ticket_code}`}
+                  size={80}
+                  level="H"
+                  fgColor="#000000"
+                  bgColor="#FFFFFF"
+                />
+              </div>
             </div>
           </div>
 

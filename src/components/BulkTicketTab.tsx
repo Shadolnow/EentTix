@@ -8,16 +8,18 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus, ShoppingCart, Trash2, Copy, ArrowLeft, Download } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, Copy, ArrowLeft, Download, HelpCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { TicketCard } from './TicketCard';
+import { HelpDialog } from './HelpDialog';
 
 interface BulkTicketTabProps {
     eventId: string;
@@ -31,11 +33,13 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        phone: ''
+        phone: '',
+        securityPin: '' // Customer sets their own PIN
     });
     const [loading, setLoading] = useState(false);
     const [tiersLoaded, setTiersLoaded] = useState(false);
     const [showUpiPayment, setShowUpiPayment] = useState(false);
+    const [upiReference, setUpiReference] = useState(''); // UPI transaction reference
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [purchasedTickets, setPurchasedTickets] = useState<any[]>([]);
 
@@ -88,6 +92,16 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
             return;
         }
 
+        if (!formData.securityPin || formData.securityPin.length < 4) {
+            toast.error('Security PIN required (minimum 4 digits)');
+            return;
+        }
+
+        if (!/^\d{4,6}$/.test(formData.securityPin)) {
+            toast.error('PIN must be 4-6 digits only');
+            return;
+        }
+
         if (totalItems === 0) {
             toast.error('Please select at least one ticket');
             return;
@@ -100,8 +114,8 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
             // Generate a unique batch ID for this bulk purchase
             const batchId = crypto.randomUUID();
 
-            // Generate a security PIN for this batch (same PIN for all tickets in one purchase)
-            const securityPin = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit PIN
+            // Use customer's security PIN (already validated)
+            const securityPin = formData.securityPin;
 
             let ticketNumberInBatch = 1;
 
@@ -112,8 +126,8 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
 
                     const status = event.is_free ? 'paid' : 'pending';
                     const refId = paymentMethod === 'upi'
-                        ? `UPI_BULK_${Date.now()}_${i}`
-                        : `CASH_BULK_${Date.now()}_${i}`;
+                        ? (upiReference.trim() || `UPI_${Date.now()}_${i}`) // Use customer's UPI ref if provided
+                        : `CASH_${Date.now()}_${i}`;
 
                     const { data, error } = await supabase
                         .from('tickets')
@@ -192,18 +206,7 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
 
                 console.log('📊 Email sending complete:', { successful, failed, total: results.length });
 
-                if (successful > 0) {
-                    toast.success(`Tickets created! Check ${formData.email} for tickets.`, {
-                        description: `${successful} email${successful > 1 ? 's' : ''} sent successfully`
-                    });
-                }
-
-                if (failed > 0) {
-                    console.warn('⚠️ Some emails failed. Results:', results);
-                    toast.info('Tickets created! If email not received, visit My Tickets page.', {
-                        description: 'You can retrieve tickets anytime using your email'
-                    });
-                }
+                // Don't show email status - focus on ticket creation
             });
 
             // Success!
@@ -217,9 +220,9 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                 colors: ['#00E5FF', '#B400FF', '#FFFFFF']
             });
 
-            // IMPORTANT: Display Security PIN to user
-            toast.success(`🔒 Security PIN: ${securityPin}`, {
-                description: 'SAVE THIS PIN! You need it along with your email and phone to retrieve tickets.',
+            // IMPORTANT: Display customer's chosen Security PIN
+            toast.success(`🔒 Your Security PIN: ${securityPin}`, {
+                description: 'SAVE THIS! You chose this PIN - need it with email & phone to retrieve tickets.',
                 duration: 15000, // Show for 15 seconds
                 action: {
                     label: 'Copy PIN',
@@ -233,7 +236,8 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
             // Store tickets and show success dialog
             setPurchasedTickets(finalTickets);
             setQuantities({});
-            setFormData({ name: '', email: '', phone: '' });
+            setFormData({ name: '', email: '', phone: '', securityPin: '' });
+            setUpiReference(''); // Reset UPI reference
             setShowSuccessDialog(true);
 
             // Note: We don't call onSuccess yet, we wait for user to close dialog
@@ -263,6 +267,48 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
 
     return (
         <div className="space-y-6">
+            {/* Premium Help Button */}
+            <HelpDialog
+                title="How to Purchase Bulk Tickets"
+                description="Step-by-step guide for buying multiple tickets"
+                variant="button"
+                buttonText="📖 Need Help? Click Here"
+                className="w-full"
+                sections={[
+                    {
+                        heading: "Enter Your Details",
+                        content: "Start by providing your information and creating a security PIN",
+                        steps: [
+                            "Fill in your Name, Email, and Phone",
+                            "Create a 4-6 digit Security PIN (you choose it!)",
+                            "⚠️ Remember this PIN - you'll need it to retrieve your tickets"
+                        ]
+                    },
+                    {
+                        heading: "Select Tickets",
+                        content: "Choose ticket types and quantities using + / - buttons"
+                    },
+                    {
+                        heading: "Payment",
+                        content: "Choose your preferred payment method:",
+                        steps: [
+                            "UPI: Scan QR code → Pay → Enter UPI reference → Click 'I've Paid'",
+                            "Cash: Pay at venue → Tickets created instantly"
+                        ]
+                    },
+                    {
+                        heading: "Retrieve Your Tickets Anytime",
+                        content: "Visit 'My Tickets' page and enter:",
+                        steps: [
+                            "✅ Your Email",
+                            "✅ Your Phone Number",
+                            "✅ Your Security PIN (the one you created)",
+                            "3-factor security ensures only YOU can access your tickets!"
+                        ]
+                    }
+                ]}
+            />
+
             {/* Customer Details */}
             {!showUpiPayment && (
                 <Card>
@@ -300,6 +346,29 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
                             </div>
+                        </div>
+
+                        {/* Security PIN Field */}
+                        <div className="mt-4">
+                            <Label htmlFor="bulk-pin" className="text-primary font-semibold">
+                                🔒 Security PIN (4-6 digits) *
+                            </Label>
+                            <Input
+                                id="bulk-pin"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                placeholder="Enter your 4-6 digit PIN"
+                                value={formData.securityPin}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, ''); // Only digits
+                                    setFormData({ ...formData, securityPin: value });
+                                }}
+                                className="text-center text-2xl tracking-widest font-bold"
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">
+                                ⚠️ <strong>Important:</strong> You'll need this PIN + email + phone to retrieve your tickets later. Choose a memorable PIN!
+                            </p>
                         </div>
 
                         <p className="text-xs text-muted-foreground">
@@ -565,9 +634,31 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                                 </div>
                                 <div className="flex items-start gap-2">
                                     <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">4</span>
-                                    <span>Click "I've Paid" below to generate your tickets</span>
+                                    <span><strong>Copy your UPI transaction ID</strong> and paste it below (recommended)</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">5</span>
+                                    <span>Click "I've Paid" to generate your tickets</span>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* UPI Reference Input */}
+                        <div className="space-y-2">
+                            <Label htmlFor="upi-ref" className="text-sm font-semibold">
+                                UPI Transaction Reference (Optional but Recommended)
+                            </Label>
+                            <Input
+                                id="upi-ref"
+                                type="text"
+                                placeholder="e.g., 434512345678 or UPI/CR/..."
+                                value={upiReference}
+                                onChange={(e) => setUpiReference(e.target.value)}
+                                className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                💡 <strong>Enter your UPI transaction ID</strong> for faster verification. Find it in your payment app after completing payment.
+                            </p>
                         </div>
 
                         {/* Confirm Button */}
@@ -617,6 +708,20 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                     </ScrollArea>
 
                     <div className="space-y-3 pt-2">
+                        {/* Security PIN Reminder */}
+                        <div className="p-4 border-2 border-primary/30 bg-primary/10 rounded-lg space-y-2">
+                            <p className="font-bold text-base text-foreground flex items-center gap-2">
+                                <span className="text-2xl">🔒</span>
+                                Your Security PIN: <span className="text-2xl tracking-widest font-mono text-primary">{purchasedTickets[0]?.security_pin || '****'}</span>
+                            </p>
+                            <div className="text-sm text-foreground/90 space-y-1 ml-9">
+                                <p>✓ <strong>You chose this PIN!</strong> Save it to retrieve tickets later</p>
+                                <p>✓ Required: <strong>Email + Phone + PIN</strong> to access tickets</p>
+                                <p>✓ PIN is <strong>automatically included</strong> when sharing via WhatsApp</p>
+                                <p>✓ Also sent to your email for safekeeping</p>
+                            </div>
+                        </div>
+
                         {/* Simple Help Section */}
                         <div className="p-4 border border-green-500/20 bg-green-500/5 rounded-lg space-y-2">
                             <p className="font-semibold text-sm text-foreground flex items-center gap-2">

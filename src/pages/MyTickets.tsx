@@ -8,6 +8,7 @@ import { TicketCard } from '@/components/TicketCard';
 import { toast } from 'sonner';
 import { Mail, Phone, Search, Ticket as TicketIcon, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { HelpDialog } from '@/components/HelpDialog';
 
 const MyTickets = () => {
     const [email, setEmail] = useState('');
@@ -110,6 +111,54 @@ const MyTickets = () => {
                         <CardDescription>
                             Enter ALL three details to access your tickets
                         </CardDescription>
+
+                        {/* Help Button */}
+                        <div className="mt-2">
+                            <HelpDialog
+                                title="How to Retrieve Your Tickets"
+                                description="Guide to accessing your tickets securely"
+                                variant="inline"
+                                buttonText="Need help finding your tickets?"
+                                sections={[
+                                    {
+                                        heading: "What You Need",
+                                        content: "To retrieve your tickets, you need ALL three pieces of information:",
+                                        steps: [
+                                            "✉️ Email - The email address you used when purchasing",
+                                            "📱 Phone - The phone number you provided",
+                                            "🔒 Security PIN - The 4-6 digit PIN you created during purchase"
+                                        ]
+                                    },
+                                    {
+                                        heading: "Where to Find Your PIN",
+                                        content: "Your security PIN can be found in:",
+                                        steps: [
+                                            "The success message after ticket purchase",
+                                            "The email confirmation sent to you",
+                                            "WhatsApp share (if you shared your ticket)"
+                                        ]
+                                    },
+                                    {
+                                        heading: "Security Protection",
+                                        content: "We use 3-factor authentication to ensure:",
+                                        steps: [
+                                            "Only YOU can access your tickets",
+                                            "Your tickets cannot be stolen or accessed by others",
+                                            "Maximum security for your event access"
+                                        ]
+                                    },
+                                    {
+                                        heading: "Forgot Your PIN?",
+                                        content: "If you can't find your PIN:",
+                                        steps: [
+                                            "Check your email inbox for the purchase confirmation",
+                                            "Look for WhatsApp messages if you shared your ticket",
+                                            "Contact support at 7507066880 for assistance"
+                                        ]
+                                    }
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

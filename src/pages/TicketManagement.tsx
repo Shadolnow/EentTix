@@ -21,6 +21,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WaitlistManager } from '@/components/WaitlistManager';
 import { BulkDeleteDialog } from '@/components/BulkDeleteDialog';
 import { DoorStaffManager } from '@/components/DoorStaffManager';
+import { ModeToggle } from '@/components/mode-toggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const attendeeSchema = z.object({
   name: z.string().trim().min(1, { message: 'Name is required' }).max(100),
@@ -47,7 +49,9 @@ const TicketManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    securityPin: '', // Customer sets their own PIN
+    paymentRef: '' // Payment reference (UPI/Cash)
   });
 
   // Bulk Delete States
@@ -237,6 +241,17 @@ const TicketManagement = () => {
       return;
     }
 
+    // Validate Security PIN
+    if (!formData.securityPin || formData.securityPin.length < 4) {
+      toast.error('Security PIN required (minimum 4 digits)');
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(formData.securityPin)) {
+      toast.error('PIN must be 4-6 digits only');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const generateId = () => {
@@ -257,7 +272,8 @@ const TicketManagement = () => {
         attendee_email: formData.email,
         attendee_phone: formData.phone,
         payment_status: 'paid', // Admin generated = Assumed Paid/Comp
-        // payment_ref_id: `MANUAL_${ticketCode}`
+        security_pin: formData.securityPin, // Add customer's PIN
+        payment_ref_id: formData.paymentRef.trim() || `MANUAL_${ticketCode}` // Use provided ref or generate
       }).select().single();
 
       if (error) throw error;
@@ -289,6 +305,20 @@ const TicketManagement = () => {
       }).catch(err => console.error("Email send warning:", err));
 
       toast.success('Ticket generated successfully');
+
+      // Display customer's chosen Security PIN
+      toast.success(`🔒 Your Security PIN: ${formData.securityPin}`, {
+        description: 'SAVE THIS! You chose this PIN - need it with email & phone to retrieve tickets',
+        duration: 15000, // 15 seconds
+        action: {
+          label: 'Copy PIN',
+          onClick: () => {
+            navigator.clipboard.writeText(formData.securityPin);
+            toast.success('PIN copied to clipboard!');
+          }
+        }
+      });
+
       // Do NOT close dialog, instead show success view
     } catch (error: any) {
       console.error('Generate ticket error:', error);
@@ -374,10 +404,16 @@ const TicketManagement = () => {
   return (
     <div className="min-h-screen p-8">
       <div className="container mx-auto max-w-6xl">
-        <Button variant="ghost" onClick={() => navigate('/events')} className="mb-6">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Events
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={() => navigate('/events')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Events
+          </Button>
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <ModeToggle />
+          </div>
+        </div>
 
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -453,6 +489,46 @@ const TicketManagement = () => {
                         Ticket will be emailed to the attendee automatically.
                       </p>
                     </div>
+                    {/* Security PIN Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="security-pin" className="text-primary font-semibold">
+                        🔒 Security PIN (4-6 digits) *
+                      </Label>
+                      <Input
+                        id="security-pin"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Enter 4-6 digit PIN"
+                        value={formData.securityPin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, ''); // Only digits
+                          setFormData({ ...formData, securityPin: value });
+                        }}
+                        className="text-center text-2xl tracking-widest font-bold"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ <strong>Important:</strong> Customer needs this PIN + email + phone to retrieve tickets later
+                      </p>
+                    </div>
+                    {/* Payment Reference Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-ref" className="text-sm font-semibold">
+                        Payment Reference (Optional)
+                      </Label>
+                      <Input
+                        id="payment-ref"
+                        type="text"
+                        placeholder="UPI Ref, Cash, Comp, etc."
+                        value={formData.paymentRef}
+                        onChange={(e) => setFormData({ ...formData, paymentRef: e.target.value })}
+                        className="font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        💡 Enter UPI transaction ID, "CASH", "COMP", or leave blank for auto-generated ref
+                      </p>
+                    </div>
                     <Button
                       type="submit"
                       variant="cyber"
@@ -466,6 +542,30 @@ const TicketManagement = () => {
                   <div className="space-y-6 animate-in fade-in zoom-in duration-300">
                     <div id="new-ticket-card" className="transform scale-90 sm:scale-100 origin-center">
                       <TicketCard ticket={newlyGeneratedTicket} />
+                    </div>
+
+                    {/* Security PIN Display - Prominent */}
+                    <div className="p-4 border-2 border-primary/30 bg-primary/10 rounded-lg space-y-2">
+                      <p className="font-bold text-lg text-foreground flex items-center gap-2">
+                        <span className="text-2xl">🔒</span>
+                        Your Security PIN: <span className="text-3xl tracking-widest font-mono text-primary">{newlyGeneratedTicket.security_pin || formData.securityPin}</span>
+                      </p>
+                      <div className="text-sm text-foreground/90 space-y-1 ml-9">
+                        <p>✓ <strong>You chose this PIN!</strong> Save it to retrieve tickets later</p>
+                        <p>✓ Customer needs: <strong>Email + Phone + This PIN</strong> to access tickets</p>
+                        <p>✓ Also sent via email for safekeeping</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-9"
+                        onClick={() => {
+                          navigator.clipboard.writeText(newlyGeneratedTicket.security_pin || formData.securityPin);
+                          toast.success('PIN copied to clipboard!');
+                        }}
+                      >
+                        📋 Copy PIN
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
@@ -488,7 +588,7 @@ const TicketManagement = () => {
                       className="w-full"
                       onClick={() => {
                         setNewlyGeneratedTicket(null);
-                        setFormData({ name: '', email: '', phone: '' });
+                        setFormData({ name: '', email: '', phone: '', securityPin: '', paymentRef: '' });
                         setIsDialogOpen(false);
                       }}
                     >

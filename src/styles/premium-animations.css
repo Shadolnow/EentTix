@@ -1,0 +1,97 @@
+/* Premium Ticket Animations */
+
+@keyframes holographic {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes securitySweep {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes rotateHue {
+    0% {
+        filter: hue-rotate(0deg);
+    }
+
+    100% {
+        filter: hue-rotate(360deg);
+    }
+}
+
+/* QR Code Border Animation */
+@keyframes qrBorderPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(124, 58, 237, 0.5), 0 0 20px rgba(219, 39, 119, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(124, 58, 237, 0.8), 0 0 40px rgba(219, 39, 119, 0.6);
+    }
+}
+
+.qr-animated-border {
+    animation: qrBorderPulse 2s ease-in-out infinite;
+}
+
+/* Premium Card Hover Effects */
+.premium-ticket-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.premium-ticket-hover:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 40px 100px rgba(124, 58, 237, 0.6), 0 0 60px rgba(219, 39, 119, 0.5);
+}
+
+/* Glowing Text */
+@keyframes textGlow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
+    50% {
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 30px rgba(0, 229, 255, 0.4);
+    }
+}
+
+.text-glow-animate {
+    animation: textGlow 3s ease-in-out infinite;
+}
+
+/* Micro shimmer for loading states */
+.micro-shimmer {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}

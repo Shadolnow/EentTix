@@ -29,6 +29,7 @@ import { WaitlistForm } from '@/components/WaitlistForm';
 import { useAuth } from '@/components/AuthProvider';
 import { BulkTicketTab } from '@/components/BulkTicketTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HelpDialog } from '@/components/HelpDialog';
 
 interface SelectedTier {
   id: string;
@@ -52,7 +53,13 @@ const PublicEvent = () => {
   const [event, setEvent] = useState<any>(null);
   const [bankDetails, setBankDetails] = useState<any>(null);
   const [claimedTicket, setClaimedTicket] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    securityPin: '', // Customer sets their own PIN
+    upiRef: '' // UPI transaction reference
+  });
   const [loading, setLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SelectedTier | null>(null);
@@ -142,7 +149,9 @@ const PublicEvent = () => {
         setFormData({
           name: pending.name,
           email: pending.email,
-          phone: pending.phone
+          phone: pending.phone,
+          securityPin: '',
+          upiRef: ''
         });
 
         if (pending.tierId) {
@@ -235,12 +244,16 @@ const PublicEvent = () => {
       let status = 'pending';
       let refId: string | null = null;
 
+      //  Determine payment reference ID - use customer's UPI ref if provided
       if (event.is_free) {
         status = 'paid'; // Free tickets are always confirmed
       } else {
         // Both UPI and Cash start as pending - admin verifies later
         status = 'pending';
-        refId = paymentType === 'upi' ? `UPI_${Date.now()}` : `CASH_${Date.now()}`;
+        // Use customer's UPI reference if provided, otherwise auto-generate
+        refId = paymentType === 'upi'
+          ? (formData.upiRef.trim() || `UPI_${Date.now()}`)
+          : `CASH_${Date.now()}`;
       }
 
       const { data: ticket, error } = await supabase
@@ -254,7 +267,8 @@ const PublicEvent = () => {
           tier_id: selectedTier?.id || null,
           payment_ref_id: refId,
           payment_status: status,
-          payment_method: paymentType
+          payment_method: paymentType,
+          security_pin: formData.securityPin // Add customer's PIN
         })
         .select()
         .single();
@@ -695,6 +709,50 @@ const PublicEvent = () => {
                       <CardDescription>
                         Enter your details to book your spot.
                       </CardDescription>
+
+                      {/* Help Button for Single Ticket */}
+                      <div className="mt-4">
+                        <HelpDialog
+                          title="How to Buy a Single Ticket"
+                          description="Quick guide to purchase your event ticket"
+                          variant="inline"
+                          buttonText="Need help with ticket purchase?"
+                          sections={[
+                            {
+                              heading: "Fill Your Details",
+                              content: "Provide your information to register for the event",
+                              steps: [
+                                "Enter your Full Name",
+                                "Provide a valid Email (ticket will be sent here)",
+                                "Add your Phone number (WhatsApp preferred)",
+                                "Create a 4-6 digit Security PIN (you choose it!)"
+                              ]
+                            },
+                            {
+                              heading: "Payment (For Paid Events)",
+                              content: "Complete your payment securely",
+                              steps: [
+                                "Click 'Proceed to Payment'",
+                                "Scan the UPI QR code with any UPI app",
+                                "Complete the payment",
+                                "Copy and paste your UPI transaction ID",
+                                "Click 'I've Paid' to generate your ticket"
+                              ]
+                            },
+                            {
+                              heading: "Retrieve Your Ticket Later",
+                              content: "Access your ticket anytime from 'My Tickets' page using:",
+                              steps: [
+                                "Your Email address",
+                                "Your Phone number",
+                                "Your Security PIN",
+                                "All three are required for security"
+                              ]
+                            }
+                          ]}
+                        />
+                      </div>
+
                       {/* Checkout Progress Indicator */}
                       <CheckoutProgress
                         currentStep={claimedTicket ? 'confirm' : 'details'}
@@ -753,6 +811,50 @@ const PublicEvent = () => {
                           />
                           <p className="text-xs text-muted-foreground">We'll send your ticket to this email.</p>
                         </div>
+
+                        {/* Security PIN Field - Matches Bulk Ticket */}
+                        <div className="space-y-2">
+                          <Label htmlFor="security-pin" className="text-primary font-semibold">
+                            🔒 Security PIN (4-6 digits) *
+                          </Label>
+                          <Input
+                            id="security-pin"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter your 4-6 digit PIN"
+                            value={formData.securityPin}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, ''); // Only digits
+                              setFormData({ ...formData, securityPin: value });
+                            }}
+                            className="text-center text-2xl tracking-widest font-bold"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            ⚠️ <strong>Important:</strong> You'll need this PIN + email + phone to retrieve your ticket later
+                          </p>
+                        </div>
+
+                        {/* UPI Reference Field - Only show for paid events */}
+                        {!event.is_free && (
+                          <div className="space-y-2">
+                            <Label htmlFor="upi-ref" className="text-sm font-semibold">
+                              UPI Transaction Reference (Optional)
+                            </Label>
+                            <Input
+                              id="upi-ref"
+                              type="text"
+                              placeholder="e.g., 434512345678 or UPI/CR/..."
+                              value={formData.upiRef}
+                              onChange={(e) => setFormData({ ...formData, upiRef: e.target.value })}
+                              className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              💡 After paying, paste your UPI transaction ID for faster verification
+                            </p>
+                          </div>
+                        )}
 
                         <Button
                           type="submit"
