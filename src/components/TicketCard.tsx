@@ -90,7 +90,7 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
       {/* Ultra Premium Security Ticket Design */}
       <div
         ref={ticketRef}
-        className="relative w-full max-w-md mx-auto overflow-hidden rounded-3xl"
+        className="relative w-full max-w-md mx-auto overflow-hidden rounded-3xl group"
         style={{
           background: 'linear-gradient(135deg, #1e3a8a 0%, #7c3aed 50%, #db2777 100%)',
           boxShadow: '0 30px 80px rgba(124, 58, 237, 0.5), 0 0 40px rgba(219, 39, 119, 0.3)',
@@ -225,7 +225,7 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
           <div
             className="absolute inset-0 opacity-60"
             style={{
-              background: 'linear-gradient(135deg, rgba(255,0,255,0.3), rgba(0,255,255,0.3), rgba(255,255,0,0.  3), rgba(255,0,255,0.3))',
+              background: 'linear-gradient(135deg, rgba(255,0,255,0.3), rgba(0,255,255,0.3), rgba(255,255,0,0.3), rgba(255,0,255,0.3))',
               backgroundSize: '200% 200%',
               animation: 'rainbowPrism 4s ease infinite'
             }}

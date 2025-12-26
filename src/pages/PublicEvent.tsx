@@ -290,8 +290,14 @@ const PublicEvent = () => {
         }
       }
 
-      // NEW FLOW: Skip email verification - proceed directly based on event type
-      // Email is validated by ticket delivery (if wrong email, no ticket received)
+      // EMAIL VERIFICATION FLOW
+      // If email is not verified, we send a magic link first
+      if (!isEmailVerified && !verificationSent) {
+        console.log("[VERIFICATION FLOW] Email not verified - sending verification email");
+        await sendVerificationEmail();
+        setLoading(false);
+        return;
+      }
 
       if (event.is_free) {
         // Free Event: Create ticket immediately
@@ -319,7 +325,7 @@ const PublicEvent = () => {
     }
   };
 
-  const createTicket = async (paymentType: 'upi' | 'cash' = 'upi') => {
+  const createTicket = async (paymentType: 'upi' | 'cash' = 'upi', providedUpiRef?: string) => {
     try {
       setLoading(true);
       const ticketCode = `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
@@ -334,9 +340,10 @@ const PublicEvent = () => {
       } else {
         // Both UPI and Cash start as pending - admin verifies later
         status = 'pending';
-        // Use customer's UPI reference if provided, otherwise auto-generate
+        // Use provided UPI reference if available, otherwise use state or auto-generate
+        const activeUpiRef = providedUpiRef || formData.upiRef;
         refId = paymentType === 'upi'
-          ? (formData.upiRef.trim() || `UPI_${Date.now()}`)
+          ? (activeUpiRef.trim() || `UPI_${Date.now()}`)
           : `CASH_${Date.now()}`;
       }
 
@@ -1024,8 +1031,15 @@ const PublicEvent = () => {
                                     We've sent a magic link to <strong>{verificationEmail}</strong>
                                   </p>
                                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-                                    Click the link in your email to verify and complete your booking. The link is valid for 60 minutes.
+                                    Click the link in your email to verify and complete your booking.
                                   </p>
+                                  <Button
+                                    variant="link"
+                                    className="text-xs text-blue-600 dark:text-blue-400 p-0 h-auto mt-2 underline"
+                                    onClick={() => setIsEmailVerified(true)}
+                                  >
+                                    Already verified? or skip verification
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -1180,12 +1194,12 @@ const PublicEvent = () => {
                       {/* Confirm Button */}
                       <Button
                         onClick={async () => {
-                          // Update formData with UPI reference
+                          // Update formData with UPI reference (for state consistency)
                           setFormData({ ...formData, upiRef: upiTransactionRef });
                           // Close dialog
                           setShowPaymentDialog(false);
-                          // Create ticket
-                          await createTicket('upi');
+                          // Create ticket with the current input value directly to avoid stale state issues
+                          await createTicket('upi', upiTransactionRef);
                         }}
                         disabled={loading}
                         className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
