@@ -290,13 +290,10 @@ const PublicEvent = () => {
         }
       }
 
-      // EMAIL VERIFICATION FLOW
-      // If email is not verified, we send a magic link first
+      // EMAIL VERIFICATION IS OPTIONAL
+      // We don't block the flow, just log if they haven't verified
       if (!isEmailVerified && !verificationSent) {
-        console.log("[VERIFICATION FLOW] Email not verified - sending verification email");
-        await sendVerificationEmail();
-        setLoading(false);
-        return;
+        console.log("[VERIFICATION FLOW] User proceeding without email verification (optional)");
       }
 
       if (event.is_free) {
