@@ -71,6 +71,14 @@ const PublicEvent = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
 
+  // Magic Link Verification States
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [pendingBookingData, setPendingBookingData] = useState<any>(null);
+
+  // Session storage key for pending booking
+  const BOOKING_SESSION_KEY = `booking_${eventId}`;
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -194,8 +202,76 @@ const PublicEvent = () => {
     }
   }, [isEmailVerified, event, formData, claimedTicket]);
 
+  // Send Magic Link for Email Verification
+  const sendVerificationEmail = async () => {
+    try {
+      setLoading(true);
+
+      // Validate form data first
+      const validated = claimSchema.parse(formData);
+
+      // Save booking data to sessionStorage
+      const bookingData = {
+        eventId,
+        name: validated.name,
+        email: validated.email,
+        phone: validated.phone,
+        securityPin: formData.securityPin,
+        upiRef: formData.upiRef,
+        tierId: selectedTier?.id || null,
+        tierName: selectedTier?.name || null,
+        tierPrice: selectedTier?.price || null,
+        timestamp: Date.now()
+      };
+
+      sessionStorage.setItem(BOOKING_SESSION_KEY, JSON.stringify(bookingData));
+      localStorage.setItem(PENDING_TICKET_KEY, JSON.stringify(bookingData));
+
+      // Send magic link via Supabase
+      const redirectUrl = `${window.location.origin}/event/${eventId}?verified=true`;
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: validated.email,
+        options: {
+          emailRedirectTo: redirectUrl,
+          shouldCreateUser: true,
+        }
+      });
+
+      if (error) throw error;
+
+      // Show verification sent UI
+      setVerificationSent(true);
+      setVerificationEmail(validated.email);
+      setPendingBookingData(bookingData);
+
+      toast.success('Verification email sent!', {
+        description: `Check ${validated.email} and click the link to complete your booking.`
+      });
+
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        console.error('Verification error:', error);
+        toast.error('Failed to send verification email. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if email is already verified
+    if (!isEmailVerified) {
+      // Send verification email instead of booking directly
+      await sendVerificationEmail();
+      return;
+    }
+
+    // Email is verified, proceed with booking
     setLoading(true);
 
     try {
@@ -856,6 +932,39 @@ const PublicEvent = () => {
                           </p>
                         </div>
 
+                        {/* Email Verification Status */}
+                        {verificationSent && !isEmailVerified && (
+                          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-500/50 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center animate-pulse">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                                  ✉️ Verification Email Sent!
+                                </h4>
+                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                                  We've sent a magic link to <strong>{verificationEmail}</strong>
+                                </p>
+                                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                                  Click the link in your email to verify and complete your booking. The link is valid for 60 minutes.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {isEmailVerified && (
+                          <div className="p-3 bg-green-50 dark:bg-green-950/30 border-2 border-green-500/50 rounded-lg flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            <span className="text-sm font-semibold text-green-800 dark:text-green-200">
+                              ✓ Email Verified! You can now complete your booking.
+                            </span>
+                          </div>
+                        )}
+
                         <Button
                           type="submit"
                           className="w-full btn-mobile-primary relative overflow-hidden group bg-gradient-to-r from-primary to-accent"
@@ -864,7 +973,13 @@ const PublicEvent = () => {
                           <span className="relative z-10 flex items-center justify-center gap-2">
                             {loading ? 'Processing...' : (
                               <>
-                                {event.is_free ? '🎫 Get My Free Ticket' : '💳 Proceed to Payment'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
+                                {!isEmailVerified ? (
+                                  <>✉️ Verify Email & Book Ticket</>
+                                ) : (
+                                  <>
+                                    {event.is_free ? '🎫 Get My Free Ticket' : '💳 Complete Booking'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
+                                  </>
+                                )}
                               </>
                             )}
                           </span>
