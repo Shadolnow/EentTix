@@ -87,7 +87,8 @@ const EventCustomizationPage = () => {
             socialLinks: event.social_links || {},
             sponsors: event.sponsors || [],
             upiId: event.upi_id || '',
-            paymentQrImageUrl: event.payment_qr_image_url || ''
+            paymentQrImageUrl: event.payment_qr_image_url || '',
+            discountPercent: event.discount_percent || 0
           }}
         />
       </div>

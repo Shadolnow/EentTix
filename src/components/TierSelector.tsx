@@ -21,9 +21,10 @@ interface TierSelectorProps {
   isFreeEvent: boolean;
   selectedTierId: string | null;
   onSelect: (tier: TicketTier | null) => void;
+  discountPercent?: number; // Global event discount
 }
 
-export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect }: TierSelectorProps) => {
+export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect, discountPercent = 0 }: TierSelectorProps) => {
   const [tiers, setTiers] = useState<TicketTier[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +43,7 @@ export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect }:
 
       if (error) throw error;
       setTiers(data || []);
-      
+
       // Auto-select first tier if only one available
       if (data && data.length === 1) {
         onSelect(data[0]);
@@ -79,7 +80,7 @@ export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect }:
         {tiers.map((tier) => {
           const available = isAvailable(tier);
           const isSelected = selectedTierId === tier.id;
-          
+
           return (
             <Card
               key={tier.id}
@@ -121,9 +122,25 @@ export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect }:
                     {isFreeEvent || tier.price === 0 ? (
                       <span className="text-lg font-bold text-primary">Free</span>
                     ) : (
-                      <div className="flex items-center text-lg font-bold">
-                        <IndianRupee className="w-4 h-4" />
-                        {tier.price.toLocaleString()}
+                      <div>
+                        {discountPercent > 0 && (
+                          <div className="flex items-center text-xs text-muted-foreground line-through mb-1">
+                            <IndianRupee className="w-3 h-3" />
+                            {tier.price.toLocaleString()}
+                          </div>
+                        )}
+                        <div className="flex items-center text-lg font-bold">
+                          <IndianRupee className="w-4 h-4" />
+                          {discountPercent > 0
+                            ? Math.round(tier.price * (1 - discountPercent / 100)).toLocaleString()
+                            : tier.price.toLocaleString()
+                          }
+                        </div>
+                        {discountPercent > 0 && (
+                          <Badge className="bg-green-500/20 text-green-600 border-green-500/50 text-xs mt-1">
+                            {discountPercent}% OFF
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>

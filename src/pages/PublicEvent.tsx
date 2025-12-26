@@ -766,13 +766,33 @@ const PublicEvent = () => {
                             isFreeEvent={event.is_free}
                             selectedTierId={selectedTier?.id || null}
                             onSelect={(tier) => setSelectedTier(tier ? { id: tier.id, name: tier.name, price: tier.price } : null)}
+                            discountPercent={event.discount_percent || 0}
                           />
                         )}
 
                         {!event.is_free && !hasTiers && (
-                          <div className="p-4 bg-muted rounded-lg flex justify-between items-center">
-                            <span className="font-medium">Standard Ticket</span>
-                            <span className="text-xl font-bold text-primary">₹{event.ticket_price}</span>
+                          <div className="p-4 bg-muted rounded-lg">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Standard Ticket</span>
+                              <div className="text-right">
+                                {event.discount_percent > 0 && (
+                                  <div className="text-xs text-muted-foreground line-through mb-1">
+                                    ₹{event.ticket_price}
+                                  </div>
+                                )}
+                                <span className="text-xl font-bold text-primary">
+                                  ₹{event.discount_percent > 0
+                                    ? Math.round(event.ticket_price * (1 - event.discount_percent / 100))
+                                    : event.ticket_price
+                                  }
+                                </span>
+                                {event.discount_percent > 0 && (
+                                  <div className="text-xs text-green-600 font-semibold mt-1">
+                                    {event.discount_percent}% OFF
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
 

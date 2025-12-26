@@ -49,6 +49,7 @@ interface EventCustomizationProps {
     sponsors?: Sponsor[];
     upiId?: string;
     paymentQrImageUrl?: string;
+    discountPercent?: number;
   };
 }
 
@@ -62,6 +63,7 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialData?.sponsors || []);
   const [upiId, setUpiId] = useState(initialData?.upiId || '');
   const [paymentQrImageUrl, setPaymentQrImageUrl] = useState(initialData?.paymentQrImageUrl || '');
+  const [discountPercent, setDiscountPercent] = useState(initialData?.discountPercent || 0); // Global event discount
   const [uploading, setUploading] = useState(false);
   const [newVideoUrl, setNewVideoUrl] = useState('');
 
@@ -322,7 +324,8 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
           social_links: socialLinks as any,
           sponsors: sponsors.filter(s => s.name && s.logoUrl) as any,
           upi_id: upiId || null,
-          qr_code_url: paymentQrImageUrl || null
+          qr_code_url: paymentQrImageUrl || null,
+          discount_percent: discountPercent
         })
         .eq('id', eventId);
 
@@ -362,6 +365,33 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
               />
               <p className="text-xs text-muted-foreground">
                 Enter a UPI ID where customers can send payments directly.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discountPercent">🎁 Event Discount (%)</Label>
+              <div className="relative">
+                <Input
+                  id="discountPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="0"
+                  value={discountPercent}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    setDiscountPercent(Math.min(100, Math.max(0, value)));
+                  }}
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  %
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                💰 Apply a blanket discount to ALL ticket tiers (0-100%).
+                Customers will see the discounted price when purchasing.
               </p>
             </div>
 
