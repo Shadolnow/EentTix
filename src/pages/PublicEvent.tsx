@@ -264,14 +264,10 @@ const PublicEvent = () => {
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if email is already verified
-    if (!isEmailVerified) {
-      // Send verification email instead of booking directly
-      await sendVerificationEmail();
-      return;
-    }
+    // Email verification is now OPTIONAL
+    // Users can proceed without verification
+    // Verification is still available but not required
 
-    // Email is verified, proceed with booking
     setLoading(true);
 
     try {
@@ -932,6 +928,24 @@ const PublicEvent = () => {
                           </p>
                         </div>
 
+                        {/* UPI Reference Field - For Paid Events */}
+                        {!event.is_free && (
+                          <div className="space-y-2">
+                            <Label htmlFor="upi-ref">UPI Transaction Reference (After Payment)</Label>
+                            <Input
+                              id="upi-ref"
+                              type="text"
+                              placeholder="e.g., 434512345678 or UPI/CR/..."
+                              value={formData.upiRef}
+                              onChange={(e) => setFormData({ ...formData, upiRef: e.target.value })}
+                              className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              💡 After making payment, paste your UPI transaction ID here for faster verification
+                            </p>
+                          </div>
+                        )}
+
                         {/* Email Verification Status */}
                         {verificationSent && !isEmailVerified && (
                           <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-500/50 rounded-lg">
@@ -973,13 +987,7 @@ const PublicEvent = () => {
                           <span className="relative z-10 flex items-center justify-center gap-2">
                             {loading ? 'Processing...' : (
                               <>
-                                {!isEmailVerified ? (
-                                  <>✉️ Verify Email & Book Ticket</>
-                                ) : (
-                                  <>
-                                    {event.is_free ? '🎫 Get My Free Ticket' : '💳 Complete Booking'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
-                                  </>
-                                )}
+                                {event.is_free ? '🎫 Get My Free Ticket' : '💳 Proceed to Payment'} <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
                               </>
                             )}
                           </span>
