@@ -30,6 +30,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { BulkTicketTab } from '@/components/BulkTicketTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpDialog } from '@/components/HelpDialog';
+import { HowItWorks } from '@/components/HowItWorks';
 
 interface SelectedTier {
   id: string;
@@ -747,6 +748,11 @@ const PublicEvent = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* How It Works Section */}
+        <div className="my-12">
+          <HowItWorks isFreeEvent={event.is_free} />
+        </div>
 
         {/* Registration Section */}
         {!claimedTicket ? (
