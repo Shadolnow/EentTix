@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/safeClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Calendar, MapPin, Ticket, QrCode, Share2, ExternalLink, Settings, Download, Plus, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Ticket, QrCode, Share2, ExternalLink, Settings, Download, Plus, Edit, Save, X, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
@@ -20,23 +20,49 @@ const Events = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editedDate, setEditedDate] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const PUBLIC_BASE_URL = (import.meta as any).env?.VITE_PUBLIC_SITE_URL || window.location.origin;
+
+  // Check if user is admin
+  useEffect(() => {
+    if (!user) return;
+
+    const checkAdmin = async () => {
+      const { data } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      setIsAdmin(data || false);
+    };
+
+    checkAdmin();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchEvents = async () => {
-      const { data } = await (supabase as any)
+      // Admins see ALL events with user info, regular users see only their own
+      const query = (supabase as any)
         .from('events')
-        .select('*')
-        .eq('user_id', user.id)
+        .select(isAdmin ? `
+          *,
+          profiles!inner(email)
+        ` : '*')
         .order('event_date', { ascending: false });
+
+      // Regular users: filter by their ID
+      if (!isAdmin) {
+        query.eq('user_id', user.id);
+      }
+
+      const { data } = await query;
 
       if (data) setEvents(data);
     };
 
     fetchEvents();
-  }, [user]);
+  }, [user, isAdmin]);
 
   const updateEventDate = async (eventId: string, newDate: string) => {
     try {
@@ -74,11 +100,28 @@ const Events = () => {
         </Button>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-gradient-cyber">My Events</h1>
-          <Button onClick={() => navigate('/global-tickets')} variant="cyber" className="w-full md:w-auto btn-touch">
-            <Ticket className="w-4 h-4 mr-2" />
-            Global Ticket Database
-          </Button>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gradient-cyber">
+              {isAdmin ? 'All Events (Admin)' : 'My Events'}
+            </h1>
+            {isAdmin && (
+              <p className="text-sm text-cyan-400 mt-1">
+                🔥 Viewing all events in the system
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {isAdmin && (
+              <Button onClick={() => navigate('/dashboard')} variant="outline" className="btn-touch border-cyan-500/50">
+                <Shield className="w-4 h-4 mr-2" />
+                Admin Dashboard
+              </Button>
+            )}
+            <Button onClick={() => navigate('/global-tickets')} variant="cyber" className="w-full md:w-auto btn-touch">
+              <Ticket className="w-4 h-4 mr-2" />
+              Global Ticket Database
+            </Button>
+          </div>
         </div>
 
         {/* Public Events Link Card */}
