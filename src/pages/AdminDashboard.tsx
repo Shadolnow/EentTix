@@ -129,24 +129,29 @@ const AdminDashboard = () => {
 
   const loadUsers = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('admin-list-users');
+      // Query auth.users directly via admin query
+      // Since we can't access auth.users directly, we'll use profiles table
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, created_at')
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      if (data?.users) {
-        // Load user roles
+      if (profilesData) {
+        // Load user roles for each profile
         const usersWithRoles = await Promise.all(
-          data.users.map(async (u: any) => {
+          profilesData.map(async (profile: any) => {
             const { data: roleData } = await supabase
               .from('user_roles')
               .select('role')
-              .eq('user_id', u.id)
+              .eq('user_id', profile.id)
               .single();
 
             return {
-              id: u.id,
-              email: u.email,
-              created_at: u.created_at,
+              id: profile.id,
+              email: profile.email,
+              created_at: profile.created_at,
               role: roleData?.role || 'user',
             };
           })
