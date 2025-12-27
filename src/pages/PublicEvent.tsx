@@ -329,11 +329,21 @@ const PublicEvent = () => {
   const createTicket = async (paymentType: 'upi' | 'cash' = 'upi', providedUpiRef?: string) => {
     try {
       setLoading(true);
+
+      // CRITICAL VALIDATION: UPI payments MUST have a reference
+      if (paymentType === 'upi' && !event.is_free) {
+        const activeUpiRef = providedUpiRef || formData.upiRef;
+        if (!activeUpiRef || activeUpiRef.trim().length < 6) {
+          toast.error('🚨 UPI Reference is REQUIRED (minimum 6 characters). Please enter your payment reference number.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const ticketCode = `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
-      // Determine status: Free = paid instantly, Paid events = pending (admin approves)
-      let status = 'pending';
-      let refId: string | null = null;
+      let status: 'pending' | 'paid' = 'pending';
+      let refId = '';
 
       //  Determine payment reference ID - use customer's UPI ref if provided
       if (event.is_free) {
@@ -341,10 +351,10 @@ const PublicEvent = () => {
       } else {
         // Both UPI and Cash start as pending - admin verifies later
         status = 'pending';
-        // Use provided UPI reference if available, otherwise use state or auto-generate
+        // Use provided UPI reference (validated above) or CASH timestamp
         const activeUpiRef = providedUpiRef || formData.upiRef;
         refId = paymentType === 'upi'
-          ? (activeUpiRef.trim() || `UPI_${Date.now()}`)
+          ? activeUpiRef.trim() // Must exist (validated above)
           : `CASH_${Date.now()}`;
       }
 

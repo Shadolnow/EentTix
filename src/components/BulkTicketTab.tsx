@@ -107,6 +107,14 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
             return;
         }
 
+        // CRITICAL: Require UPI reference for UPI payments
+        if (paymentMethod === 'upi' && !event.is_free) {
+            if (!upiReference || upiReference.trim().length < 6) {
+                toast.error('🚨 UPI Reference is REQUIRED (minimum 6 characters). Please enter your payment reference number.');
+                return;
+            }
+        }
+
         try {
             setLoading(true);
             const createdTickets = [];
@@ -125,8 +133,9 @@ export const BulkTicketTab = ({ eventId, event, onSuccess }: BulkTicketTabProps)
                     const ticketCode = `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
                     const status = event.is_free ? 'paid' : 'pending';
+                    // NO AUTO-GENERATION - Use actual UPI ref or CASH timestamp
                     const refId = paymentMethod === 'upi'
-                        ? (upiReference.trim() || `UPI_${Date.now()}_${i}`) // Use customer's UPI ref if provided
+                        ? upiReference.trim() // Must be provided (validated above)
                         : `CASH_${Date.now()}_${i}`;
 
                     const { data, error } = await supabase
