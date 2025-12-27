@@ -51,6 +51,7 @@ interface EventCustomizationProps {
     paymentQrImageUrl?: string;
     discountPercent?: number;
     event_date?: string; // Added for date editing
+    coverImageUrl?: string; // Main event cover image
   };
 }
 
@@ -95,7 +96,9 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
   const [paymentQrImageUrl, setPaymentQrImageUrl] = useState(initialData?.paymentQrImageUrl || '');
   const [discountPercent, setDiscountPercent] = useState(initialData?.discountPercent || 0); // Global event discount
   const [eventDate, setEventDate] = useState(formatDateForInput(initialData?.event_date)); // Event date in local format
+  const [coverImageUrl, setCoverImageUrl] = useState(initialData?.coverImageUrl || ''); // Main event cover image
   const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
@@ -154,6 +157,53 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
       setUploading(false);
     }
   };
+
+  // Upload cover image (main event photo)
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    if (file.size > maxSize) {
+      toast.error('Image too large. Maximum size is 5MB');
+      return;
+    }
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Only JPEG, PNG, and WebP are allowed');
+      return;
+    }
+
+    setUploadingCover(true);
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      const fileName = `${userId}/covers/${eventId}.${fileExt}`;
+
+      // Upload to event-images bucket
+      const { error: uploadError } = await supabase.storage
+        .from('event-images')
+        .upload(fileName, file, { upsert: true }); // upsert replaces existing
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-images')
+        .getPublicUrl(fileName);
+
+      setCoverImageUrl(publicUrl);
+      toast.success('Cover image uploaded!');
+
+      // Reset file input
+      e.target.value = '';
+    } catch (error: any) {
+      console.error('Cover upload error:', error);
+      toast.error(`Failed to upload cover image: ${error.message}`);
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
 
   const removeImage = (index: number) => {
     setGalleryImages(galleryImages.filter((_, i) => i !== index));
@@ -402,6 +452,7 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
       const { error } = await supabase
         .from('events')
         .update({
+          image_url: coverImageUrl || null, // Main cover image
           gallery_images: galleryImages,
           videos: videos,
           faq: faq.filter(f => f.question && f.answer) as any,
@@ -456,6 +507,54 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
             />
             <p className="text-xs text-muted-foreground">
               💡 Set in your local timezone - will be converted automatically
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cover Image Editor */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-accent/5 to-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5 text-primary" />
+            🖼️ Event Cover Image
+          </CardTitle>
+          <CardDescription>
+            Change the main photo displayed on your event page
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Current cover preview */}
+          {coverImageUrl && (
+            <div className="relative">
+              <img
+                src={coverImageUrl}
+                alt="Event cover"
+                className="w-full h-48 object-cover rounded-lg border-2 border-border"
+              />
+              <p className="text-xs text-muted-foreground mt-2">Current cover image</p>
+            </div>
+          )}
+
+          {/* Upload new cover */}
+          <div className="space-y-2">
+            <Label htmlFor="coverImage">Upload New Cover Image</Label>
+            <Input
+              id="coverImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleCoverImageUpload}
+              disabled={uploadingCover}
+              className="max-w-md"
+            />
+            {uploadingCover && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                Uploading cover image...
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              📸 JPEG, PNG, or WebP. Max 5MB. Recommended: 1920x1080px
             </p>
           </div>
         </CardContent>

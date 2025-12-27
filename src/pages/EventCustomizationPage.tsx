@@ -89,7 +89,8 @@ const EventCustomizationPage = () => {
             upiId: event.upi_id || '',
             paymentQrImageUrl: event.payment_qr_image_url || '',
             discountPercent: event.discount_percent || 0,
-            event_date: event.event_date // Pass event date for editing
+            event_date: event.event_date, // Pass event date for editing
+            coverImageUrl: event.image_url // Pass cover image for editing
           }}
         />
       </div>
