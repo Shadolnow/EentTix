@@ -250,6 +250,16 @@ const Scan = () => {
   const startScanning = async () => {
     try {
       setCameraError('');
+      setIsScanning(true); // Show the container FIRST so the library can attach correctly
+
+      // Small delay to ensure DOM is updated (removed hidden class)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Check if scanner is already running, stop if so
+      if (scannerRef.current?.isScanning) {
+        await scannerRef.current.stop();
+      }
+
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
@@ -258,21 +268,34 @@ const Scan = () => {
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
         },
         (decodedText) => {
           validateTicket(decodedText);
+          // Optional: Pause scanning after success to prevent double reads
+          // scanner.pause(); 
+          // setTimeout(() => scanner.resume(), 2000);
         },
         (errorMessage) => {
           // Ignore scanning errors (happens when no QR code is in view)
         }
       );
 
-      setIsScanning(true);
     } catch (err: any) {
       console.error('Camera error:', err);
-      setCameraError('Unable to access camera. Please grant camera permissions.');
-      toast.error('Camera access denied', {
-        description: 'Please enable camera permissions in your browser settings',
+      setIsScanning(false); // Hide container on error
+
+      let errorMessage = 'Unable to access camera.';
+      if (err?.name === 'NotAllowedError' || err?.message?.includes('permission')) {
+        errorMessage = 'Camera permission denied. Please enable it in browser settings.';
+      } else if (err?.name === 'NotFoundError') {
+        errorMessage = 'No camera found on this device.';
+      }
+
+      setCameraError(errorMessage);
+      toast.error('Camera Error', {
+        description: errorMessage,
+        duration: 5000
       });
     }
   };
