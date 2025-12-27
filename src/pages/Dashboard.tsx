@@ -113,30 +113,32 @@ const Dashboard = () => {
 
   const loadUsers = async () => {
     try {
-      // Query all users from auth.users via RPC
+      // Query all users from auth.users via RPC (includes profiles)
       const { data: authUsers, error: authError } = await supabase.rpc('list_all_users_admin');
 
       if (authError) {
         console.error('Auth users error:', authError);
-        // Fallback: query profiles directly
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (profilesError) throw profilesError;
-
-        // Map profiles to user format
-        const usersFromProfiles = profilesData?.map(p => ({
-          id: p.user_id,
-          email: p.email || 'No email',
-          created_at: p.created_at
-        })) || [];
-
-        setAllUsers(usersFromProfiles);
-      } else {
-        setAllUsers(authUsers || []);
+        toast({
+          variant: 'destructive',
+          title: 'Error loading users',
+          description: getUserFriendlyError(authError),
+        });
+        return;
       }
+
+      setAllUsers(authUsers || []);
+
+      // Build profiles map from RPC data (already has profile info)
+      const profilesMap: Record<string, Profile> = {};
+      authUsers?.forEach((u: any) => {
+        profilesMap[u.id] = {
+          user_id: u.id,
+          account_type: u.account_type,
+          company_name: u.company_name,
+          plan_type: u.plan_type
+        };
+      });
+      setProfiles(profilesMap);
 
       // Load roles
       const { data: rolesData, error: rolesError } = await supabase
@@ -146,19 +148,6 @@ const Dashboard = () => {
 
       if (rolesError) throw rolesError;
       setUserRoles(rolesData || []);
-
-      // Fetch profiles for all users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (profilesError) throw profilesError;
-
-      const profilesMap: Record<string, Profile> = {};
-      profilesData?.forEach((p) => {
-        profilesMap[p.user_id] = p;
-      });
-      setProfiles(profilesMap);
     } catch (error: any) {
       console.error('Load users error:', error);
       toast({
