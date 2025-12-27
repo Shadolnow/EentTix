@@ -55,6 +55,35 @@ interface EventCustomizationProps {
 }
 
 export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initialData }: EventCustomizationProps) => {
+  // Helper function: Convert UTC to local datetime-local format
+  const formatDateForInput = (utcDate: string | null | undefined): string => {
+    if (!utcDate) return '';
+    try {
+      const date = new Date(utcDate);
+      // Format as YYYY-MM-DDTHH:mm for datetime-local input
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Helper function: Convert local datetime-local to UTC ISO string for database
+  const formatDateForDb = (localDateTime: string): string => {
+    if (!localDateTime) return '';
+    try {
+      // datetime-local is in user's timezone, convert to UTC ISO
+      const date = new Date(localDateTime);
+      return date.toISOString();
+    } catch {
+      return '';
+    }
+  };
+
   const [galleryImages, setGalleryImages] = useState<string[]>(initialData?.galleryImages || []);
   const [videos, setVideos] = useState<string[]>(initialData?.videos || []);
   const [faq, setFaq] = useState<FAQ[]>(initialData?.faq || []);
@@ -65,7 +94,7 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
   const [upiId, setUpiId] = useState(initialData?.upiId || '');
   const [paymentQrImageUrl, setPaymentQrImageUrl] = useState(initialData?.paymentQrImageUrl || '');
   const [discountPercent, setDiscountPercent] = useState(initialData?.discountPercent || 0); // Global event discount
-  const [eventDate, setEventDate] = useState(initialData?.event_date || ''); // Event date editing
+  const [eventDate, setEventDate] = useState(formatDateForInput(initialData?.event_date)); // Event date in local format
   const [uploading, setUploading] = useState(false);
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -383,7 +412,7 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
           upi_id: upiId || null,
           qr_code_url: paymentQrImageUrl || null,
           discount_percent: discountPercent,
-          event_date: eventDate || null // Save event date
+          event_date: eventDate ? formatDateForDb(eventDate) : null // Convert local time to UTC
         })
         .eq('id', eventId);
 
@@ -421,12 +450,12 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
             <Input
               id="eventDate"
               type="datetime-local"
-              value={eventDate ? eventDate.slice(0, 16) : ''}
+              value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
               className="max-w-md"
             />
             <p className="text-xs text-muted-foreground">
-              💡 This will update the event date shown to customers
+              💡 Set in your local timezone - will be converted automatically
             </p>
           </div>
         </CardContent>
