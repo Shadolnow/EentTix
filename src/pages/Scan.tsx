@@ -17,6 +17,9 @@ const Scan = () => {
   const [cameraError, setCameraError] = useState('');
   const { user } = useAuth();
 
+  // Detect iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   useEffect(() => {
     // Require authentication to access scanner
     if (!user) {
@@ -264,11 +267,17 @@ const Scan = () => {
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
+      // iOS-specific constraints
+      const cameraConfig = isIOS
+        ? { facingMode: { exact: 'environment' } }
+        : { facingMode: 'environment' };
+
       await scanner.start(
-        { facingMode: 'environment' },
+        cameraConfig,
         {
           fps: 10,
           qrbox: 250,
+          aspectRatio: 1.0,
         },
         (decodedText) => {
           validateTicket(decodedText);
@@ -360,6 +369,11 @@ const Scan = () => {
                   <p className="text-muted-foreground text-center">
                     {cameraError || 'Ready to scan QR codes'}
                   </p>
+                  {isIOS && !cameraError && (
+                    <p className="text-xs text-yellow-500 text-center max-w-xs">
+                      💡 Tip: On iPhone, "Upload QR Image" below works better than camera
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -399,13 +413,13 @@ const Scan = () => {
               </div>
 
               <Button
-                variant="outline"
+                variant={isIOS ? "default" : "outline"}
                 size="lg"
-                className="w-full border-primary/20 hover:bg-primary/5"
+                className={isIOS ? "w-full bg-primary hover:bg-primary/90" : "w-full border-primary/20 hover:bg-primary/5"}
                 onClick={() => document.getElementById('qr-file-input')?.click()}
               >
                 <Upload className="w-5 h-5 mr-2" />
-                Upload QR Image
+                {isIOS ? "📸 Upload QR Image (Recommended)" : "Upload QR Image"}
               </Button>
               <Input
                 id="qr-file-input"
