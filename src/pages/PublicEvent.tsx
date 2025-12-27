@@ -31,6 +31,7 @@ import { BulkTicketTab } from '@/components/BulkTicketTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpDialog } from '@/components/HelpDialog';
 import { HowItWorks } from '@/components/HowItWorks';
+import { PartyBackground, PartyHeader, PartyCard, PartyButton } from '@/components/PartyElements';
 
 interface SelectedTier {
   id: string;
@@ -549,31 +550,33 @@ const PublicEvent = () => {
   const ticketPrice = selectedTier ? selectedTier.price : (event.ticket_price || 0);
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="container mx-auto max-w-4xl">
-        <Button variant="ghost" onClick={() => navigate('/public-events')} className="mb-6">
+    <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+      <PartyBackground />
+      <div className="container mx-auto max-w-4xl relative z-10">
+        <Button variant="ghost" onClick={() => navigate('/public-events')} className="mb-6 hover:bg-white/10 hover:text-white">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Events
         </Button>
 
         {/* Event Details */}
-        <Card className="mb-8 overflow-hidden border-2 border-primary/10">
+        <PartyCard className="mb-8 group">
           {event.image_url && (
-            <div className="w-full h-64 md:h-80 overflow-hidden bg-muted">
+            <div className="w-full h-64 md:h-96 overflow-hidden bg-muted relative">
               <img
                 src={event.image_url}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
             </div>
           )}
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold">{event.title}</CardTitle>
-            <CardDescription className="flex items-center gap-2 text-lg">
-              <Calendar className="w-5 h-5 text-primary" />
-              {format(new Date(event.event_date), 'PPP')}
-            </CardDescription>
-          </CardHeader>
+
+          <div className="pt-8 pb-4 px-6">
+            <PartyHeader
+              title={event.title}
+              subtitle={format(new Date(event.event_date), 'PPP p')}
+            />
+          </div>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -624,11 +627,11 @@ const PublicEvent = () => {
               </div>
             )}
           </CardContent>
-        </Card>
+        </PartyCard>
 
         {/* Gallery */}
         {event.gallery_images && event.gallery_images.length > 0 && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImageIcon className="w-5 h-5" />
@@ -648,12 +651,12 @@ const PublicEvent = () => {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* Videos */}
         {event.videos && event.videos.length > 0 && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Video className="w-5 h-5" />
@@ -675,12 +678,12 @@ const PublicEvent = () => {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* Schedule */}
         {event.schedule && event.schedule.length > 0 && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
@@ -690,7 +693,7 @@ const PublicEvent = () => {
             <CardContent>
               <div className="space-y-4">
                 {event.schedule.map((item: any, index: number) => (
-                  <div key={index} className="flex gap-4 p-4 border rounded-lg">
+                  <div key={index} className="flex gap-4 p-4 border rounded-lg bg-white/50 backdrop-blur-sm">
                     <div className="text-primary font-bold min-w-[80px]">
                       {item.time}
                     </div>
@@ -704,12 +707,12 @@ const PublicEvent = () => {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* FAQ */}
         {event.faq && event.faq.length > 0 && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <HelpCircle className="w-5 h-5" />
@@ -726,12 +729,12 @@ const PublicEvent = () => {
                 ))}
               </Accordion>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* Sponsors */}
         {event.sponsors && event.sponsors.length > 0 && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="w-5 h-5" />
@@ -746,7 +749,7 @@ const PublicEvent = () => {
                     href={sponsor.websiteUrl || '#'}
                     target={sponsor.websiteUrl ? '_blank' : undefined}
                     rel="noopener noreferrer"
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow ${sponsor.websiteUrl ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border bg-card/80 backdrop-blur-sm hover:shadow-md transition-shadow ${sponsor.websiteUrl ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     <img
                       src={sponsor.logoUrl}
@@ -758,12 +761,12 @@ const PublicEvent = () => {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* Additional Info */}
         {event.additional_info && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
             </CardHeader>
@@ -772,12 +775,12 @@ const PublicEvent = () => {
                 {event.additional_info}
               </p>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* Social Links */}
         {event.social_links && Object.values(event.social_links).some(Boolean) && (
-          <Card className="mb-8">
+          <PartyCard className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="w-5 h-5" />
@@ -818,7 +821,7 @@ const PublicEvent = () => {
                 )}
               </div>
             </CardContent>
-          </Card>
+          </PartyCard>
         )}
 
         {/* How It Works Section */}
@@ -856,7 +859,7 @@ const PublicEvent = () => {
 
                   {/* Single Ticket Tab */}
                   <TabsContent value="single">
-                    <Card className="border-2 border-primary/20 shadow-lg shadow-primary/5">
+                    <PartyCard className="border-2 border-primary/20 shadow-lg shadow-primary/5">
                       <CardHeader>
                         <CardTitle className="text-2xl flex items-center gap-2">
                           <Ticket className="w-6 h-6 text-primary" />
@@ -1100,7 +1103,7 @@ const PublicEvent = () => {
                           </Button>
                         </form>
                       </CardContent>
-                    </Card>
+                    </PartyCard>
                   </TabsContent>
 
                   {/* Bulk Ticket Tab */}
