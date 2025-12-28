@@ -87,26 +87,23 @@ const PublicEvent = () => {
 
     const fetchEvent = async () => {
       console.log('Fetching event with ID:', eventId);
+
+      // Use RPC function to bypass RLS issues
       const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          profiles:user_id (email)
-        `)
-        .eq('id', eventId)
-        .maybeSingle();
+        .rpc('get_event_details', { event_id: eventId });
 
       console.log('Event fetch result:', { data, error });
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         console.error('Event fetch error:', error);
         toast.error('Event not found');
         navigate('/public-events');
         return;
       }
 
-      console.log('Event loaded successfully:', data.title);
-      setEvent(data);
+      const eventData = data[0]; // RPC returns array
+      console.log('Event loaded successfully:', eventData.title);
+      setEvent(eventData);
 
       // Check if event has tiers
       const { data: tiers } = await supabase
@@ -135,11 +132,10 @@ const PublicEvent = () => {
         .from('tickets')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', eventId)
-        .neq('status', 'cancelled'); // Don't count cancelled tickets
+        .neq('status', 'cancelled');
 
       setTicketsSold(count || 0);
     };
-
     fetchEvent();
   }, [eventId, navigate]);
 
