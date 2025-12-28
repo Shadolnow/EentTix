@@ -96,7 +96,7 @@ export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect, d
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold truncate">{tier.name}</h4>
+                      <h4 className="font-semibold break-words">{tier.name}</h4>
                       {!available && (
                         <Badge variant="destructive" className="shrink-0">Sold Out</Badge>
                       )}
@@ -107,7 +107,7 @@ export const TierSelector = ({ eventId, isFreeEvent, selectedTierId, onSelect, d
                       )}
                     </div>
                     {tier.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {tier.description}
                       </p>
                     )}
