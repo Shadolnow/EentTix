@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/safeClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { ArrowLeft, Camera, CheckCircle2, XCircle, BarChart3, AlertCircle, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -175,12 +176,34 @@ const Scan = () => {
         return;
       }
 
-      const { error: updateError } = await (supabase as any)
+      // Atomic update with race condition prevention
+      const { data: updated, error: updateError } = await (supabase as any)
         .from('tickets')
-        .update({ is_validated: true, validated_at: new Date().toISOString() })
-        .eq('id', ticketTyped.id);
+        .update({
+          is_validated: true,
+          validated_at: new Date().toISOString()
+        })
+        .eq('id', ticketTyped.id)
+        .eq('is_validated', false) // Only update if not already validated
+        .select()
+        .single();
 
       if (updateError) throw updateError;
+
+      // Check if update actually happened (race condition check)
+      if (!updated) {
+        playErrorSound();
+        toast.error('Ticket already validated', {
+          description: 'Another scanner validated this ticket first',
+          duration: 3000,
+        });
+        setLastScan({
+          success: false,
+          message: 'Already validated by another scanner',
+          ticket: ticketTyped
+        });
+        return;
+      }
 
       playSuccessSound();
       toast.success('✅ Ticket Valid!', {
@@ -275,18 +298,23 @@ const Scan = () => {
       await scanner.start(
         cameraConfig,
         {
-          fps: 30, // ULTRA FAST scanning
-          qrbox: { width: 350, height: 350 }, // Even larger scan area
-          aspectRatio: 1.777778,
+          fps: 60, // Doubled for faster detection
+          qrbox: { width: 400, height: 400 }, // Larger scan area for easier targeting
+          aspectRatio: 1.0, // Square aspect ratio optimal for QR codes
           disableFlip: false,
           videoConstraints: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            advanced: [{ focusMode: "continuous" }]
+            width: { ideal: 1920 }, // Higher resolution
+            height: { ideal: 1080 },
+            advanced: [
+              { focusMode: "continuous" } as any,
+              { exposureMode: "continuous" } as any, // Better in varying light
+              { whiteBalanceMode: "continuous" } as any // Adapt to lighting
+            ]
           },
+          // @ts-ignore - experimentalFeatures not in type definition but supported
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true // Native scanner if available
-          }
+          } as any // Type assertion for experimental features
         },
         (decodedText) => {
           console.log("✅ SCANNED:", decodedText);
@@ -443,6 +471,56 @@ const Scan = () => {
                 onChange={handleFileUpload}
               />
             </div>
+
+            {/* Manual Entry Fallback */}
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-muted/20" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or enter manually</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manual-code" className="text-sm font-medium">
+                  Manual Ticket Entry
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="manual-code"
+                    placeholder="XXXXXXXX-XXXXXXXX"
+                    maxLength={17}
+                    className="font-mono uppercase"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.currentTarget;
+                        if (input.value) {
+                          validateTicket(input.value.toUpperCase());
+                          input.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => {
+                      const input = document.getElementById('manual-code') as HTMLInputElement;
+                      if (input?.value) {
+                        validateTicket(input.value.toUpperCase());
+                        input.value = '';
+                      }
+                    }}
+                    variant="outline"
+                  >
+                    Validate
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  💡 Use when QR code is damaged, wet, or unreadable
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -503,7 +581,7 @@ const Scan = () => {
           </Card>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 
