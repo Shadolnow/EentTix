@@ -13,7 +13,7 @@ export const PartyBackground = () => {
                 {['🎉', '🎊', '🎈', '✨', '🎆', '🌟', '💫', '🎇'].map((emoji, i) => (
                     <div
                         key={i}
-                        className="absolute text-4xl md:text-6xl opacity-20 animate-float"
+                        className="absolute text-2xl md:text-5xl opacity-20 animate-float"
                         style={{
                             left: `${(i * 12.5) + 5}%`,
                             top: `${Math.random() * 100}%`,
@@ -35,20 +35,20 @@ export const PartyBackground = () => {
 // Party section header with animated title
 export const PartyHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => {
     return (
-        <div className="text-center mb-8 relative z-10">
-            <h1 className="text-5xl md:text-7xl font-black mb-4 relative">
-                <span className="absolute -inset-1 blur-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-50" />
+        <div className="text-center mb-6 relative z-10">
+            <h1 className="text-2xl md:text-5xl font-black mb-3 relative">
+                <span className="absolute -inset-1 blur-xl bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-50" />
                 <span className="relative bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-transparent bg-clip-text animate-gradient-x">
                     {title}
                 </span>
             </h1>
             {subtitle && (
-                <p className="text-xl md:text-2xl text-muted-foreground font-medium">
+                <p className="text-base md:text-xl text-muted-foreground font-medium">
                     {subtitle}
                 </p>
             )}
             {/* Party poppers */}
-            <div className="flex justify-center gap-4 mt-4 text-3xl md:text-4xl animate-bounce">
+            <div className="flex justify-center gap-2 mt-3 text-xl md:text-3xl animate-bounce">
                 🎊 🎉 🎊
             </div>
         </div>
@@ -74,7 +74,7 @@ export const PartyButton = ({
             onClick={onClick}
             disabled={disabled}
             className={`
-        relative px-8 py-4 rounded-xl font-bold text-lg md:text-xl
+        relative px-6 py-3 rounded-xl font-bold text-base md:text-lg
         transform transition-all duration-200
         hover:scale-105 active:scale-95
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
