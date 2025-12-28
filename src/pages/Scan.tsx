@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Camera, CheckCircle2, XCircle, BarChart3, AlertCircle, Upload, SwitchCamera } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle2, XCircle, BarChart3, AlertCircle, Upload, SwitchCamera, Wifi, WifiOff, RefreshCw, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '@/components/AuthProvider';
@@ -20,6 +20,12 @@ const Scan = () => {
   const [availableCameras, setAvailableCameras] = useState<any[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
 
+  // Offline Mode States
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [ticketCache, setTicketCache] = useState<Map<string, any>>(new Map());
+  const [isCaching, setIsCaching] = useState(false);
+  const [lastCacheUpdate, setLastCacheUpdate] = useState<Date | null>(null);
+
   // Detect iOS
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -30,12 +36,74 @@ const Scan = () => {
       navigate('/auth');
       return;
     }
+
+    // Monitor Online/Offline status
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success('System back online. Syncing...');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning('Offline detected. Using secure local cache.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial cache load for performance
+    loadTicketCache();
+
     return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       if (scannerRef.current?.isScanning) {
         scannerRef.current.stop().catch(console.error);
       }
     };
   }, [user, navigate]);
+
+  const loadTicketCache = async () => {
+    if (!user) return;
+    setIsCaching(true);
+
+    try {
+      // 1. Try to load from localStorage first for instant boot
+      const savedCache = localStorage.getItem(`ticket_cache_${user.id}`);
+      if (savedCache) {
+        const parsed = JSON.parse(savedCache);
+        setTicketCache(new Map(Object.entries(parsed)));
+        setLastCacheUpdate(new Date(localStorage.getItem(`cache_time_${user.id}`) || Date.now()));
+      }
+
+      if (navigator.onLine) {
+        // 2. Fetch fresh data from Supabase
+        const { data, error } = await (supabase as any)
+          .from('tickets')
+          .select('*, events(*)')
+          .eq('events.user_id', user.id);
+
+        if (error) throw error;
+
+        const newCache = new Map();
+        data?.forEach((ticket: any) => {
+          newCache.set(ticket.ticket_code, ticket);
+        });
+
+        setTicketCache(newCache);
+        setLastCacheUpdate(new Date());
+
+        // 3. Persist to localStorage
+        localStorage.setItem(`ticket_cache_${user.id}`, JSON.stringify(Object.fromEntries(newCache)));
+        localStorage.setItem(`cache_time_${user.id}`, new Date().toISOString());
+
+        console.log(`✅ Cached ${newCache.size} tickets for offline use`);
+      }
+    } catch (err) {
+      console.error('Caching error:', err);
+    } finally {
+      setIsCaching(false);
+    }
+  };
 
   const playSuccessSound = () => {
     const audioContext = new AudioContext();
@@ -92,15 +160,26 @@ const Scan = () => {
         setLastScan({ success: false, message: 'Not signed in', code: ticketCode });
         return;
       }
-      const { data: ticket, error } = await (supabase as any)
-        .from('tickets')
-        .select('*, events(*)')
-        .eq('ticket_code', ticketCode)
-        .maybeSingle();
 
-      const ticketTyped = ticket as any;
+      let ticketTyped: any = null;
 
-      if (error || !ticketTyped) {
+      if (navigator.onLine) {
+        // ONLINE VALIDATION (Primary)
+        const { data: ticket, error } = await (supabase as any)
+          .from('tickets')
+          .select('*, events(*)')
+          .eq('ticket_code', ticketCode)
+          .maybeSingle();
+
+        if (error) throw error;
+        ticketTyped = ticket;
+      } else {
+        // OFFLINE VALIDATION (Secondary/Backup)
+        ticketTyped = ticketCache.get(ticketCode);
+        console.log('🔍 Offline validation attempt:', ticketCode, ticketTyped ? 'FOUND' : 'NOT FOUND');
+      }
+
+      if (!ticketTyped) {
         playErrorSound();
         toast.error('Invalid ticket code', {
           description: 'This ticket does not exist',
@@ -213,18 +292,99 @@ const Scan = () => {
         duration: 4000,
       });
 
+      // Update state immediately for visual feedback
       setLastScan({
         success: true,
-        message: 'Valid ticket',
+        message: navigator.onLine ? 'Valid ticket' : 'Valid (Offline Confirmed)',
         ticket: ticketTyped,
-        validatedAt: new Date().toISOString()
+        validatedAt: new Date().toISOString(),
+        offline: !navigator.onLine
       });
+
+      // If offline, save this scan to sync later
+      if (!navigator.onLine) {
+        saveOfflineScan(ticketTyped.id);
+      }
 
     } catch (error: any) {
       console.error('Ticket validation error', error);
+
+      // FALLBACK: If network error during validation, try cache
+      if (!navigator.onLine || error.message?.includes('Network')) {
+        const fallbackTicket = ticketCache.get(ticketCode);
+        if (fallbackTicket) {
+          playSuccessSound();
+          toast.warning('Network slow. Validated via Cache.');
+          setLastScan({
+            success: true,
+            message: 'Valid (Network Fallback)',
+            ticket: fallbackTicket,
+            validatedAt: new Date().toISOString(),
+            offline: true
+          });
+          saveOfflineScan(fallbackTicket.id);
+          return;
+        }
+      }
+
       playErrorSound();
       toast.error('Validation failed');
       setLastScan({ success: false, message: 'Validation error', code: ticketCode });
+    }
+  };
+
+  const saveOfflineScan = (ticketId: string) => {
+    const offlineScans = JSON.parse(localStorage.getItem(`offline_scans_${user?.id}`) || '[]');
+    if (!offlineScans.includes(ticketId)) {
+      offlineScans.push({
+        id: ticketId,
+        validated_at: new Date().toISOString()
+      });
+      localStorage.setItem(`offline_scans_${user?.id}`, JSON.stringify(offlineScans));
+
+      // Update local memory cache to reflect validation
+      const updatedCache = new Map(ticketCache);
+      const ticket = updatedCache.get(ticketId);
+      if (ticket) {
+        ticket.is_validated = true;
+        ticket.validated_at = new Date().toISOString();
+        setTicketCache(updatedCache);
+      }
+    }
+  };
+
+  const syncOfflineScans = async () => {
+    if (!navigator.onLine || !user) return;
+
+    const offlineScans = JSON.parse(localStorage.getItem(`offline_scans_${user.id}`) || '[]');
+    if (offlineScans.length === 0) return;
+
+    setIsCaching(true);
+    let successCount = 0;
+
+    try {
+      for (const scan of offlineScans) {
+        const { error } = await (supabase as any)
+          .from('tickets')
+          .update({
+            is_validated: true,
+            validated_at: scan.validated_at
+          })
+          .eq('id', scan.id)
+          .eq('is_validated', false);
+
+        if (!error) successCount++;
+      }
+
+      localStorage.setItem(`offline_scans_${user.id}`, '[]');
+      if (successCount > 0) {
+        toast.success(`Successfully synced ${successCount} offline scans!`);
+      }
+      loadTicketCache(); // Refresh cache after sync
+    } catch (err) {
+      console.error('Sync error:', err);
+    } finally {
+      setIsCaching(false);
     }
   };
 
@@ -451,8 +611,25 @@ const Scan = () => {
 
         <Card className="border-2 border-primary/20 shadow-neon-cyan mb-6">
           <CardHeader>
-            <CardTitle className="text-3xl text-gradient-cyber">QR Scanner</CardTitle>
-            <CardDescription>Scan tickets to validate entry</CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-3xl text-gradient-cyber">QR Scanner</CardTitle>
+                <CardDescription>Scan tickets to validate entry</CardDescription>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnline ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                  }`}>
+                  {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                  {isOnline ? 'ONLINE' : 'OFFLINE'}
+                </div>
+                {lastCacheUpdate && (
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Database className="w-2.5 h-2.5" />
+                    Cache: {lastCacheUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* QR Scanner Container */}
@@ -491,25 +668,27 @@ const Scan = () => {
                   Start Camera
                 </Button>
               ) : (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="w-full"
-                  onClick={stopScanning}
-                >
-                  Stop Camera
-                </Button>
-                {availableCameras.length > 1 && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={switchCamera}
-                  className="flex-shrink-0"
-                  title="Switch Camera"
-                >
-                  <SwitchCamera className="w-5 h-5" />
-                </Button>
-              )}
+                <>
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    className="w-full"
+                    onClick={stopScanning}
+                  >
+                    Stop Camera
+                  </Button>
+                  {availableCameras.length > 1 && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={switchCamera}
+                      className="flex-shrink-0"
+                      title="Switch Camera"
+                    >
+                      <SwitchCamera className="w-5 h-5" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
 
@@ -639,16 +818,44 @@ const Scan = () => {
                     <div className="mt-4">
                       <Button
                         onClick={confirmPaymentAndValidate}
+                        disabled={!isOnline}
                         className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold"
                       >
-                        Collect Cash & Validate
+                        {isOnline ? 'Collect Cash & Validate' : '⚠️ Connect to Sync Payment'}
                       </Button>
+                      {!isOnline && (
+                        <p className="text-[10px] text-center mt-2 text-amber-500">
+                          Payment verification requires an active internet connection.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {lastScan.offline && (
+                    <div className="mt-4 p-2 bg-blue-500/10 border border-blue-500/20 rounded flex items-center gap-2">
+                      <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                      <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">
+                        Validated Offline - Will sync when online
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Sync Button (Visible only when offline scans exist) */}
+        {navigator.onLine && localStorage.getItem(`offline_scans_${user?.id}`) !== '[]' && localStorage.getItem(`offline_scans_${user?.id}`) !== null && (
+          <Button
+            variant="outline"
+            className="w-full mt-4 border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+            onClick={syncOfflineScans}
+            disabled={isCaching}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isCaching ? 'animate-spin' : ''}`} />
+            Sync Offline Scans
+          </Button>
         )}
       </div>
     </div >
