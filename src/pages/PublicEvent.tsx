@@ -634,209 +634,9 @@ const PublicEvent = () => {
           </CardContent>
         </PartyCard>
 
-        {/* Gallery */}
-        {event.gallery_images && event.gallery_images.length > 0 && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" />
-                Event Gallery
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {event.gallery_images.map((url: string, index: number) => (
-                  <img
-                    key={index}
-                    src={url}
-                    alt={`Gallery ${index + 1}`}
-                    className="w-full h-48 object-cover rounded-lg border-2 border-border hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => window.open(url, '_blank')}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* Videos */}
-        {event.videos && event.videos.length > 0 && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="w-5 h-5" />
-                Event Videos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                {event.videos.map((url: string, index: number) => (
-                  <div key={index} className="aspect-video rounded-lg overflow-hidden border-2 border-border">
-                    <iframe
-                      src={url}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      title={`Event video ${index + 1}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* Schedule */}
-        {event.schedule && event.schedule.length > 0 && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Event Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {event.schedule.map((item: any, index: number) => (
-                  <div key={index} className="flex gap-4 p-4 border rounded-lg bg-white/50 backdrop-blur-sm">
-                    <div className="text-primary font-bold min-w-[80px]">
-                      {item.time}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{item.title}</h4>
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* FAQ */}
-        {event.faq && event.faq.length > 0 && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5" />
-                Frequently Asked Questions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {event.faq.map((item: any, index: number) => (
-                  <AccordionItem key={index} value={`item-${index}`}>
-                    <AccordionTrigger>{item.question}</AccordionTrigger>
-                    <AccordionContent>{item.answer}</AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* Sponsors */}
-        {event.sponsors && event.sponsors.length > 0 && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                Our Sponsors
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                {event.sponsors.map((sponsor: any, index: number) => (
-                  <a
-                    key={index}
-                    href={sponsor.websiteUrl || '#'}
-                    target={sponsor.websiteUrl ? '_blank' : undefined}
-                    rel="noopener noreferrer"
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border bg-card/80 backdrop-blur-sm hover:shadow-md transition-shadow ${sponsor.websiteUrl ? 'cursor-pointer' : 'cursor-default'}`}
-                  >
-                    <img
-                      src={sponsor.logoUrl}
-                      alt={sponsor.name}
-                      className="h-16 w-auto max-w-full object-contain"
-                    />
-                    <span className="text-sm font-medium text-center">{sponsor.name}</span>
-                  </a>
-                ))}
-              </div>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* Additional Info */}
-        {event.additional_info && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap text-muted-foreground">
-                {event.additional_info}
-              </p>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* Social Links */}
-        {event.social_links && Object.values(event.social_links).some(Boolean) && (
-          <PartyCard className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                Connect With Us
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {event.social_links.instagram && (
-                  <a href={formatSocialUrl('instagram', event.social_links.instagram)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity">
-                    <Instagram className="w-5 h-5" /> Instagram
-                  </a>
-                )}
-                {event.social_links.facebook && (
-                  <a href={formatSocialUrl('facebook', event.social_links.facebook)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:opacity-90 transition-opacity">
-                    <Facebook className="w-5 h-5" /> Facebook
-                  </a>
-                )}
-                {event.social_links.twitter && (
-                  <a href={formatSocialUrl('twitter', event.social_links.twitter)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white hover:opacity-90 transition-opacity">
-                    <Twitter className="w-5 h-5" /> Twitter/X
-                  </a>
-                )}
-                {event.social_links.linkedin && (
-                  <a href={formatSocialUrl('linkedin', event.social_links.linkedin)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-700 text-white hover:opacity-90 transition-opacity">
-                    <Linkedin className="w-5 h-5" /> LinkedIn
-                  </a>
-                )}
-                {event.social_links.youtube && (
-                  <a href={formatSocialUrl('youtube', event.social_links.youtube)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition-opacity">
-                    <Youtube className="w-5 h-5" /> YouTube
-                  </a>
-                )}
-                {event.social_links.website && (
-                  <a href={formatSocialUrl('website', event.social_links.website)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700 text-white hover:opacity-90 transition-opacity">
-                    <Globe className="w-5 h-5" /> Website
-                  </a>
-                )}
-              </div>
-            </CardContent>
-          </PartyCard>
-        )}
-
-        {/* How It Works Section */}
-        <div className="my-12">
-          <HowItWorks isFreeEvent={event.is_free} />
-        </div>
-
-        {/* Registration Section */}
+        {/* Registration Section - MOVED UP for better conversion */}
         {!claimedTicket ? (
-          <div id="register" className="space-y-6">
+          <div id="register" className="space-y-6 mb-8">
             {/* Social Proof Banner */}
             <SocialProofBanner
               eventId={eventId!}
@@ -1256,7 +1056,7 @@ const PublicEvent = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 mb-8">
             <Alert className={`bg-${claimedTicket.payment_status === 'pay_at_venue' ? 'yellow' : 'green'}-500/10 border-${claimedTicket.payment_status === 'pay_at_venue' ? 'yellow' : 'green'}-500/20 text-${claimedTicket.payment_status === 'pay_at_venue' ? 'yellow' : 'green'}-500`}>
               <CheckCircle2 className="h-4 w-4" />
               <div className="space-y-1">
@@ -1279,6 +1079,207 @@ const PublicEvent = () => {
             </div>
           </div>
         )}
+
+        {/* How It Works Section - MOVED UP */}
+        <div className="my-8">
+          <HowItWorks isFreeEvent={event.is_free} />
+        </div>
+
+        {/* Gallery */}
+        {event.gallery_images && event.gallery_images.length > 0 && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Event Gallery
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {event.gallery_images.map((url: string, index: number) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`Gallery ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg border-2 border-border hover:scale-105 transition-transform cursor-pointer"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* Videos */}
+        {event.videos && event.videos.length > 0 && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5" />
+                Event Videos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6">
+                {event.videos.map((url: string, index: number) => (
+                  <div key={index} className="aspect-video rounded-lg overflow-hidden border-2 border-border">
+                    <iframe
+                      src={url}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Event video ${index + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* Schedule */}
+        {event.schedule && event.schedule.length > 0 && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Event Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {event.schedule.map((item: any, index: number) => (
+                  <div key={index} className="flex gap-4 p-4 border rounded-lg bg-white/50 backdrop-blur-sm">
+                    <div className="text-primary font-bold min-w-[80px]">
+                      {item.time}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">{item.title}</h4>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* FAQ */}
+        {event.faq && event.faq.length > 0 && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5" />
+                Frequently Asked Questions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                {event.faq.map((item: any, index: number) => (
+                  <AccordionItem key={index} value={`item-${index}`}>
+                    <AccordionTrigger>{item.question}</AccordionTrigger>
+                    <AccordionContent>{item.answer}</AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* Sponsors */}
+        {event.sponsors && event.sponsors.length > 0 && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                Our Sponsors
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {event.sponsors.map((sponsor: any, index: number) => (
+                  <a
+                    key={index}
+                    href={sponsor.websiteUrl || '#'}
+                    target={sponsor.websiteUrl ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border bg-card/80 backdrop-blur-sm hover:shadow-md transition-shadow ${sponsor.websiteUrl ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <img
+                      src={sponsor.logoUrl}
+                      alt={sponsor.name}
+                      className="h-16 w-auto max-w-full object-contain"
+                    />
+                    <span className="text-sm font-medium text-center">{sponsor.name}</span>
+                  </a>
+                ))}
+              </div>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* Additional Info */}
+        {event.additional_info && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap text-muted-foreground">
+                {event.additional_info}
+              </p>
+            </CardContent>
+          </PartyCard>
+        )}
+
+        {/* Social Links */}
+        {event.social_links && Object.values(event.social_links).some(Boolean) && (
+          <PartyCard className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Connect With Us
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {event.social_links.instagram && (
+                  <a href={formatSocialUrl('instagram', event.social_links.instagram)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity">
+                    <Instagram className="w-5 h-5" /> Instagram
+                  </a>
+                )}
+                {event.social_links.facebook && (
+                  <a href={formatSocialUrl('facebook', event.social_links.facebook)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:opacity-90 transition-opacity">
+                    <Facebook className="w-5 h-5" /> Facebook
+                  </a>
+                )}
+                {event.social_links.twitter && (
+                  <a href={formatSocialUrl('twitter', event.social_links.twitter)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white hover:opacity-90 transition-opacity">
+                    <Twitter className="w-5 h-5" /> Twitter/X
+                  </a>
+                )}
+                {event.social_links.linkedin && (
+                  <a href={formatSocialUrl('linkedin', event.social_links.linkedin)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-700 text-white hover:opacity-90 transition-opacity">
+                    <Linkedin className="w-5 h-5" /> LinkedIn
+                  </a>
+                )}
+                {event.social_links.youtube && (
+                  <a href={formatSocialUrl('youtube', event.social_links.youtube)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition-opacity">
+                    <Youtube className="w-5 h-5" /> YouTube
+                  </a>
+                )}
+                {event.social_links.website && (
+                  <a href={formatSocialUrl('website', event.social_links.website)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700 text-white hover:opacity-90 transition-opacity">
+                    <Globe className="w-5 h-5" /> Website
+                  </a>
+                )}
+              </div>
+            </CardContent>
+          </PartyCard>
+        )}
+
 
         {/* Testimonials Section */}
         <div className="mt-12">
@@ -1400,6 +1401,26 @@ const PublicEvent = () => {
                   <p className="text-xs text-center text-muted-foreground bg-muted/50 p-2 rounded-lg">
                     💡 Scan the QR code or copy the UPI ID to make payment. Your ticket will be generated and admin will verify.
                   </p>
+
+                  {/* UPI Reference Input - CRITICAL */}
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="upiRef" className="text-sm font-medium flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      UPI Transaction Reference / UTR Number
+                    </Label>
+                    <Input
+                      id="upiRef"
+                      placeholder="Enter 12-digit UTR/Ref number (e.g., 123456789012)"
+                      value={formData.upiRef || ''}
+                      onChange={(e) => setFormData({ ...formData, upiRef: e.target.value })}
+                      className="font-mono text-center"
+                      maxLength={20}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      📱 Find this in your payment app after completing the UPI payment
+                    </p>
+                  </div>
 
                   <Button
                     onClick={() => createTicket('upi')}
