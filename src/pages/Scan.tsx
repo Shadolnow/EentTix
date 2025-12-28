@@ -491,27 +491,25 @@ const Scan = () => {
                   Start Camera
                 </Button>
               ) : (
-                <>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    className="flex-1"
-                    onClick={stopScanning}
-                  >
-                    Stop Camera
-                  </Button>
-                  {availableCameras.length > 1 && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={switchCamera}
-                      className="flex-shrink-0"
-                      title="Switch Camera"
-                    >
-                      <SwitchCamera className="w-5 h-5" />
-                    </Button>
-                  )}
-                </>
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="w-full"
+                  onClick={stopScanning}
+                >
+                  Stop Camera
+                </Button>
+                {availableCameras.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={switchCamera}
+                  className="flex-shrink-0"
+                  title="Switch Camera"
+                >
+                  <SwitchCamera className="w-5 h-5" />
+                </Button>
+              )}
               )}
             </div>
 
