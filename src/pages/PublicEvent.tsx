@@ -289,10 +289,23 @@ const PublicEvent = () => {
         }
       }
 
+<<<<<<< Updated upstream
       // EMAIL VERIFICATION IS OPTIONAL
       // We don't block the flow, just log if they haven't verified
       if (!isEmailVerified && !verificationSent) {
         console.log("[VERIFICATION FLOW] User proceeding without email verification (optional)");
+=======
+      // Use Supabase Native Auth for OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        email: validated.email,
+        options: {
+          shouldCreateUser: true,
+        }
+      });
+
+      if (error) {
+        throw error;
+>>>>>>> Stashed changes
       }
 
       if (event.is_free) {
@@ -314,14 +327,54 @@ const PublicEvent = () => {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
+<<<<<<< Updated upstream
         toast.error('Something went wrong. Please try again.');
+=======
+        toast.error(error.message || 'Failed to send OTP. Please check your email.');
+>>>>>>> Stashed changes
         console.error(error);
       }
       setLoading(false);
     }
   };
 
+<<<<<<< Updated upstream
   const createTicket = async (paymentType: 'upi' | 'cash' = 'upi', providedUpiRef?: string) => {
+=======
+  const verifyOtp = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: formData.email,
+        token: otp,
+        type: 'email'
+      });
+
+      if (error) throw error;
+
+      // If we don't have a session, verification failed or was magic link
+      if (!data.session) {
+        throw new Error("Verification failed or session not created.");
+      }
+
+      setIsEmailVerified(true);
+      toast.success("Email verified successfully!");
+
+      if (event.is_free) {
+        await createTicket();
+      } else {
+        setShowPaymentDialog(true);
+        setLoading(false);
+      }
+
+    } catch (error: any) {
+      toast.error(error.message || "Invalid OTP code");
+      setLoading(false);
+    }
+  };
+
+  const createTicket = async (paymentType: 'online' | 'venue' = 'online') => {
+>>>>>>> Stashed changes
     try {
       setLoading(true);
 

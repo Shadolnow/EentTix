@@ -26,9 +26,10 @@ export default async function handler(req, res) {
 
     try {
         const { createClient } = await import('@supabase/supabase-js');
+        // Use service role key to bypass RLS on otp_verifications table
         const supabase = createClient(
             process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         // Get the most recent OTP for this email
