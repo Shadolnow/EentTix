@@ -229,7 +229,15 @@ const PublicEvents = () => {
           </div>
           <CardDescription className="flex items-center gap-2 animate-in slide-in-from-left-5 duration-300">
             <Calendar className="w-4 h-4" />
-            {format(new Date(event.event_date), 'PPP')}
+            {event.event_date ? (
+              (() => {
+                try {
+                  return format(new Date(event.event_date), 'PPP');
+                } catch (e) {
+                  return 'Date TBA';
+                }
+              })()
+            ) : 'Date TBA'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
