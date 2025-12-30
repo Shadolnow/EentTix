@@ -93,75 +93,153 @@ const DoorStaffScanner = () => {
             setScanResult(null);
             setScannerStatus('starting');
 
-            // === AGGRESSIVE BACK CAMERA SELECTION ===
+            console.log('📷 [Scanner] Starting camera initialization...');
+
+            // Request camera permission first
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                console.log('📷 [Scanner] Camera permission granted');
+            } catch (permErr: any) {
+                console.error('📷 [Scanner] Permission error:', permErr);
+                throw new Error(`Camera permission denied: ${permErr.message}`);
+            }
+
+            // Get available cameras
             const devices = await Html5Qrcode.getCameras().catch(() => []);
             setAvailableCameras(devices);
-
-            console.log('📷 [Door Staff] Available cameras:', devices);
+            console.log('📷 [Scanner] Found cameras:', devices.length, devices);
 
             // Small delay for DOM to render the container
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            const html5QrCode = new Html5Qrcode("reader", { verbose: false });
+            // Check if reader element exists
+            const readerElement = document.getElementById('reader');
+            if (!readerElement) {
+                throw new Error('Reader element not found in DOM');
+            }
+
+            const html5QrCode = new Html5Qrcode("reader", { verbose: true });
             scannerRef.current = html5QrCode;
 
-            let selectedCamera: any = null;
+            const scanConfig = {
+                fps: 15,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                disableFlip: false
+            };
 
-            // Strategy 1: Find camera with "back/rear/environment" in label
-            const backCameraByLabel = devices.find(cam =>
-                /back|rear|environment|traseira|arrière|главная|后置/i.test(cam.label || '')
-            );
+            const onSuccess = (decodedText: string) => {
+                console.log('✅ [Scanner] QR decoded:', decodedText);
+                if (navigator.vibrate) navigator.vibrate(100);
+                handleScan(decodedText);
+            };
 
-            // Strategy 2: On mobile, the LAST camera is usually the back camera
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const lastCamera = devices.length > 0 ? devices[devices.length - 1] : null;
+            const onError = () => {
+                // Silent - just means no QR in frame
+            };
 
-            // Strategy 3: User's previously selected camera
-            const userSelectedCamera = cameraId && devices.find(d => d.id === cameraId);
+            // TRY MULTIPLE CAMERA STRATEGIES
+            let started = false;
 
-            // Choose in this priority order:
-            selectedCamera = userSelectedCamera || backCameraByLabel || (isMobile ? lastCamera : null);
+            // Strategy 1: Use specific back camera if found
+            if (devices.length > 0 && !started) {
+                const backCamera = devices.find(d =>
+                    /back|rear|environment|traseira/i.test(d.label || '')
+                ) || devices[devices.length - 1]; // Last camera is usually back
 
-            console.log('📷 [Door Staff] Selected camera:', selectedCamera);
-
-            // Use camera ID if found, otherwise fall back to environment constraint
-            const targetCamera = selectedCamera ? selectedCamera.id : { facingMode: { exact: "environment" } };
-
-            console.log('📷 [Door Staff] Camera config:', targetCamera);
-
-            await html5QrCode.start(
-                targetCamera,
-                {
-                    fps: 20,
-                    qrbox: (viewfinderWidth, viewfinderHeight) => {
-                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                        const size = Math.floor(minEdge * 0.9); // 90% for easier scanning
-                        return { width: size, height: size };
-                    },
-                    aspectRatio: 1.0,
-                    disableFlip: true
-                },
-                (decodedText) => {
-                    if (navigator.vibrate) navigator.vibrate(100);
-                    handleScan(decodedText);
-                },
-                (errorMessage) => {
-                    // silently handle frame errors
+                if (backCamera) {
+                    try {
+                        console.log('📷 [Scanner] Trying camera by ID:', backCamera.label);
+                        await html5QrCode.start(backCamera.id, scanConfig, onSuccess, onError);
+                        started = true;
+                        console.log('✅ [Scanner] Started with camera:', backCamera.label);
+                    } catch (err) {
+                        console.warn('📷 [Scanner] Strategy 1 failed:', err);
+                    }
                 }
-            ).then(() => {
-                setScannerStatus('scanning');
-                // Check torch
-                const track = (html5QrCode as any).getRunningTrack();
+            }
+
+            // Strategy 2: Try facingMode environment (not exact)
+            if (!started) {
+                try {
+                    console.log('📷 [Scanner] Trying facingMode: environment');
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        scanConfig,
+                        onSuccess,
+                        onError
+                    );
+                    started = true;
+                    console.log('✅ [Scanner] Started with environment mode');
+                } catch (err) {
+                    console.warn('📷 [Scanner] Strategy 2 failed:', err);
+                }
+            }
+
+            // Strategy 3: Try facingMode user (front camera - better than nothing)
+            if (!started) {
+                try {
+                    console.log('📷 [Scanner] Trying facingMode: user');
+                    await html5QrCode.start(
+                        { facingMode: "user" },
+                        scanConfig,
+                        onSuccess,
+                        onError
+                    );
+                    started = true;
+                    console.log('✅ [Scanner] Started with user mode (front camera)');
+                    toast.warning('Using front camera - back camera not available');
+                } catch (err) {
+                    console.warn('📷 [Scanner] Strategy 3 failed:', err);
+                }
+            }
+
+            // Strategy 4: Try first available camera
+            if (!started && devices.length > 0) {
+                try {
+                    console.log('📷 [Scanner] Trying first camera:', devices[0].label);
+                    await html5QrCode.start(devices[0].id, scanConfig, onSuccess, onError);
+                    started = true;
+                    console.log('✅ [Scanner] Started with first camera');
+                } catch (err) {
+                    console.warn('📷 [Scanner] Strategy 4 failed:', err);
+                }
+            }
+
+            if (!started) {
+                throw new Error('All camera strategies failed. Try using Upload QR Image instead.');
+            }
+
+            setScannerStatus('scanning');
+
+            // Check torch support
+            try {
+                const track = (html5QrCode as any).getRunningTrack?.();
                 if (track) {
                     const caps = track.getCapabilities();
                     setHasTorch(!!caps.torch);
                 }
-            });
+            } catch (e) {
+                // Torch check failed, not critical
+            }
+
         } catch (err: any) {
-            console.error("Scanner error", err);
+            console.error("📷 [Scanner] Final error:", err);
             setScanning(false);
             setScannerStatus('error');
-            toast.error("Could not start camera. Check permissions.");
+
+            let errorMessage = 'Unable to access camera.';
+            if (err.message?.includes('permission')) {
+                errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
+            } else if (err.message?.includes('not found')) {
+                errorMessage = 'No camera found. Try using Upload QR Image below.';
+            }
+
+            toast.error("Camera Error", {
+                description: errorMessage,
+                duration: 10000
+            });
         }
     };
 
