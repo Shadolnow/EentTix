@@ -89,7 +89,7 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
         ticket.attendee_email,
         ticket.attendee_phone || 'N/A',
         ticket.ticket_code,
-        ticket.tier_name || 'Standard',
+        ticket.tier_name || 'Standard Entry',
         ticket.payment_status || 'paid',
         ticket.is_validated ? 'Yes' : 'No',
         format(new Date(ticket.created_at), 'PPpp')
@@ -170,11 +170,12 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
               <tr>
                 <th style="width: 5%">#</th>
                 <th style="width: 20%">Attendee Name</th>
-                <th style="width: 25%">Contact Info</th>
+                <th style="width: 20%">Contact Info</th>
                 <th style="width: 15%">Ticket Code</th>
                 <th style="width: 15%">Tier Type</th>
                 <th style="width: 10%">Status</th>
                 <th style="width: 10%">Sign-in</th>
+                <th style="width: 15%">Gate Check</th>
               </tr>
             </thead>
             <tbody>
@@ -184,9 +185,10 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
                   <td><strong>${t.attendee_name}</strong></td>
                   <td>${t.attendee_email}<br><small>${t.attendee_phone || '-'}</small></td>
                   <td style="font-family: monospace;">${t.ticket_code}</td>
-                  <td class="tier-badge">${t.tier_name || 'Standard'}</td>
+                  <td class="tier-badge">${t.tier_name || 'Standard Entry'}</td>
                   <td>${t.payment_status === 'paid' ? 'PAID' : 'PENDING'}</td>
                   <td><div class="sign-box"></div></td>
+                  <td><div class="sign-box" style="width: 100px;"></div></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -247,7 +249,7 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
           <div class="flex gap-2">
             <Button variant="outline" onClick={downloadBackupPDF} className="btn-flex h-9 text-xs">
               <Printer className="w-4 h-4 mr-2" />
-              Backup PDF
+              Download PDF Record
             </Button>
             <Button variant="outline" onClick={downloadCSV} disabled={isExporting} className="btn-flex h-9 text-xs">
               <Download className="w-4 h-4 mr-2" />
@@ -267,6 +269,7 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
                   <TableHead>Name</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Ticket Code</TableHead>
+                  <TableHead>Tier</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -281,6 +284,11 @@ export const AttendeeList = ({ tickets, eventTitle, eventId }: AttendeeListProps
                       <div className="text-xs text-muted-foreground">{ticket.attendee_phone || '-'}</div>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{ticket.ticket_code}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-primary/30 text-primary-foreground font-bold">
+                        {ticket.tier_name || 'Standard Entry'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {getStatusBadge(ticket)}
                     </TableCell>

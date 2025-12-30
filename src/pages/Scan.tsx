@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Camera, CheckCircle2, XCircle, BarChart3, AlertCircle, Upload, SwitchCamera, Wifi, WifiOff, RefreshCw, Database } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Camera, CheckCircle2, XCircle, BarChart3, AlertCircle, Upload, SwitchCamera, Wifi, WifiOff, RefreshCw, Database, Flashlight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '@/components/AuthProvider';
@@ -28,6 +29,12 @@ const Scan = () => {
 
   // Detect iOS
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  // HUD and Pro Features
+  const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState<'idle' | 'starting' | 'scanning' | 'error'>('idle');
+  const [hasTorch, setHasTorch] = useState(false);
 
   useEffect(() => {
     // Require authentication to access scanner
@@ -141,6 +148,29 @@ const Scan = () => {
     oscillator.stop(audioContext.currentTime + 0.4);
   };
 
+  const updateRecentScans = (scan: any) => {
+    setRecentScans(prev => {
+      const newList = [scan, ...prev];
+      return newList.slice(0, 5); // Keep only last 5
+    });
+  };
+
+  const toggleTorch = async () => {
+    if (!scannerRef.current || !hasTorch) return;
+    try {
+      const newState = !isTorchOn;
+      await scannerRef.current.applyVideoConstraints({
+        // @ts-ignore
+        advanced: [{ torch: newState }]
+      });
+      setIsTorchOn(newState);
+      toast.success(newState ? 'Flashlight ON' : 'Flashlight OFF');
+    } catch (err) {
+      console.error('Torch error:', err);
+      toast.error('Flashlight not supported on this camera');
+    }
+  };
+
   const validateTicket = async (ticketCode: string) => {
     // Validate ticket code format
     const TICKET_CODE_PATTERN = /^[A-Z0-9]{8}-[A-Z0-9]{8}$/i;
@@ -201,18 +231,20 @@ const Scan = () => {
         return;
       }
 
-      if (ticketTyped.is_validated) {
+      if (ticketTyped.checked_in_at || ticketTyped.is_validated) {
+        const checkInTime = ticketTyped.checked_in_at || ticketTyped.validated_at;
         playErrorSound();
         toast.error('Ticket already used', {
-          description: `Validated on ${new Date(ticketTyped.validated_at).toLocaleString()}`,
+          description: `Checked in at ${new Date(checkInTime).toLocaleString()}`,
           duration: 3000,
         });
         setLastScan({
           success: false,
-          message: 'Already validated',
+          message: 'Already Checked In',
           ticket: ticketTyped,
-          validatedAt: ticketTyped.validated_at
+          validatedAt: checkInTime
         });
+        updateRecentScans({ ...ticketTyped, success: false, error: 'Already Used' });
         return;
       }
 
@@ -262,7 +294,8 @@ const Scan = () => {
         .from('tickets')
         .update({
           is_validated: true,
-          validated_at: new Date().toISOString()
+          checked_in_at: new Date().toISOString(),
+          validated_at: new Date().toISOString() // Keep for compatibility
         })
         .eq('id', ticketTyped.id)
         .eq('is_validated', false) // Only update if not already validated
@@ -305,6 +338,8 @@ const Scan = () => {
       if (!navigator.onLine) {
         saveOfflineScan(ticketTyped.id);
       }
+
+      updateRecentScans({ ...ticketTyped, success: true });
 
     } catch (error: any) {
       console.error('Ticket validation error', error);
@@ -368,6 +403,7 @@ const Scan = () => {
           .from('tickets')
           .update({
             is_validated: true,
+            checked_in_at: scan.validated_at,
             validated_at: scan.validated_at
           })
           .eq('id', scan.id)
@@ -396,6 +432,7 @@ const Scan = () => {
         .from('tickets')
         .update({
           is_validated: true,
+          checked_in_at: new Date().toISOString(),
           validated_at: new Date().toISOString(),
           payment_status: 'paid',
           payment_ref_id: 'CASH_AT_VENUE'
@@ -439,100 +476,99 @@ const Scan = () => {
   const startScanning = async () => {
     try {
       setCameraError('');
-      setIsScanning(true); // Show the container FIRST so the library can attach correctly
+      setScannerStatus('starting');
+      setIsScanning(true);
 
-      // Small delay to ensure DOM is updated (removed hidden class)
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Small delay to ensure DOM is updated and container is visible
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Check if scanner is already running, stop if so
-      if (scannerRef.current?.isScanning) {
-        await scannerRef.current.stop();
+      // Clean up previous instance if it exists
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
+          scannerRef.current.clear();
+        } catch (e) {
+          console.warn('Scanner cleanup warning:', e);
+        }
       }
 
-      const scanner = new Html5Qrcode('qr-reader');
+      const scanner = new Html5Qrcode('qr-reader', { verbose: false });
       scannerRef.current = scanner;
 
-      // Get available cameras and prefer back camera
-      const cameras = await Html5Qrcode.getCameras();
+      // 1. Get available cameras
+      const cameras = await Html5Qrcode.getCameras().catch(() => []);
       setAvailableCameras(cameras);
 
-      let cameraConfig: any;
+      let cameraConfig: any = { facingMode: "environment" };
 
-      if (selectedCameraId) {
-        // Use user-selected camera
+      // Priority 1: User selected camera
+      if (selectedCameraId && cameras.some(c => c.id === selectedCameraId)) {
         cameraConfig = selectedCameraId;
-      } else if (cameras && cameras.length > 0) {
-        // Auto-select back camera
+      }
+      // Priority 2: Try to find a back camera ID if we haven't already
+      else if (cameras.length > 0) {
         const backCamera = cameras.find(cam =>
-          cam.label.toLowerCase().includes('back') ||
-          cam.label.toLowerCase().includes('rear') ||
-          cam.label.toLowerCase().includes('environment')
+          /back|rear|environment|main|out/i.test(cam.label)
         );
-
         if (backCamera) {
           cameraConfig = backCamera.id;
           setSelectedCameraId(backCamera.id);
-          console.log('✅ Using back camera:', backCamera.label);
-        } else {
-          // Fallback to last camera (usually back on mobile)
-          cameraConfig = cameras[cameras.length - 1].id;
-          setSelectedCameraId(cameras[cameras.length - 1].id);
-          console.log('Using camera:', cameras[cameras.length - 1].label);
         }
-      } else {
-        // Fallback to facingMode if no cameras enumerated
-        cameraConfig = { facingMode: 'environment' };
       }
 
       await scanner.start(
         cameraConfig,
         {
-          fps: 60, // Doubled for faster detection
-          qrbox: { width: 400, height: 400 }, // Larger scan area for easier targeting
-          aspectRatio: 1.0, // Square aspect ratio optimal for QR codes
-          disableFlip: false,
-          videoConstraints: {
-            width: { ideal: 1920 }, // Higher resolution
-            height: { ideal: 1080 },
-            advanced: [
-              { focusMode: "continuous" } as any,
-              { exposureMode: "continuous" } as any, // Better in varying light
-              { whiteBalanceMode: "continuous" } as any // Adapt to lighting
-            ]
+          fps: 20,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.85); // Larger box
+            return { width: size, height: size };
           },
-          // @ts-ignore - experimentalFeatures not in type definition but supported
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true // Native scanner if available
-          } as any // Type assertion for experimental features
+          aspectRatio: 1.0,
+          disableFlip: true,
+          videoConstraints: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         },
         (decodedText) => {
-          console.log("✅ SCANNED:", decodedText);
-          if (navigator.vibrate) navigator.vibrate(200); // Haptic feedback
+          if (navigator.vibrate) navigator.vibrate(100);
           validateTicket(decodedText);
         },
         (errorMessage) => {
-          if (errorMessage.includes("permission") || errorMessage.includes("NotAllowed")) {
-            setCameraError("Camera access denied");
-          }
+          // Internal library errors (usually just "QR not found in frame")
         }
-      );
+      ).then(() => {
+        setScannerStatus('scanning');
+        // Check for torch support after start
+        const track = (scannerRef.current as any)?.getRunningTrack();
+        if (track) {
+          const capabilities = track.getCapabilities();
+          // @ts-ignore
+          setHasTorch(!!capabilities.torch);
+        }
+      });
 
     } catch (err: any) {
-      console.error('Camera error:', err);
-      setIsScanning(false); // Hide container on error
+      console.error('Final Scanner Error:', err);
+      setScannerStatus('error');
+      setIsScanning(false);
 
       let errorMessage = 'Unable to access camera.';
       if (err?.name === 'NotAllowedError' || err?.message?.includes('permission')) {
         errorMessage = 'Camera permission denied. Please enable it in browser settings.';
       } else if (err?.name === 'NotFoundError') {
         errorMessage = 'No camera found on this device.';
+      } else if (err?.message?.includes('already scanning')) {
+        errorMessage = 'Scanner is already initializing. Please wait.';
       }
 
       setCameraError(errorMessage);
-      toast.error('Camera Error', {
-        description: errorMessage,
-        duration: 5000
-      });
+      toast.error('Camera Error', { description: errorMessage });
     }
   };
 
@@ -687,7 +723,7 @@ const Scan = () => {
             </div>
 
             {/* Scanner Controls */}
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4">
               {!isScanning ? (
                 <Button
                   variant="cyber"
@@ -696,30 +732,49 @@ const Scan = () => {
                   onClick={startScanning}
                 >
                   <Camera className="w-5 h-5 mr-2" />
-                  Start Camera
+                  Open Entry Gate
                 </Button>
               ) : (
-                <>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    className="w-full"
-                    onClick={stopScanning}
-                  >
-                    Stop Camera
-                  </Button>
-                  {availableCameras.length > 1 && (
+                <div className="space-y-4">
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       size="lg"
-                      onClick={switchCamera}
-                      className="flex-shrink-0"
-                      title="Switch Camera"
+                      className="flex-1"
+                      onClick={stopScanning}
                     >
-                      <SwitchCamera className="w-5 h-5" />
+                      Close Gate
                     </Button>
+                    {hasTorch && (
+                      <Button
+                        variant={isTorchOn ? "default" : "outline"}
+                        size="lg"
+                        className={`w-14 ${isTorchOn ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : ''}`}
+                        onClick={toggleTorch}
+                      >
+                        <Flashlight className={`w-5 h-5 ${isTorchOn ? 'fill-current' : ''}`} />
+                      </Button>
+                    )}
+                    {availableCameras.length > 1 && (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={switchCamera}
+                        className="w-14"
+                        title="Switch Camera"
+                      >
+                        <SwitchCamera className="w-5 h-5" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {scannerStatus === 'starting' && (
+                    <div className="flex items-center justify-center gap-2 text-primary animate-pulse py-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span className="text-sm font-bold uppercase tracking-widest">Waking up lens...</span>
+                    </div>
                   )}
-                </>
+                </div>
               )}
             </div>
 
@@ -871,6 +926,48 @@ const Scan = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* PRO HUD: Recent Activity Log */}
+        {recentScans.length > 0 && (
+          <Card className="mt-8 border-border/40 bg-card/30 backdrop-blur-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center justify-between">
+                <span>Recent Activity</span>
+                <Badge variant="outline" className="text-[10px]">{recentScans.length} scans</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentScans.map((scan, idx) => (
+                  <div key={`${scan.id}-${idx}`}
+                    className={`flex items-center justify-between p-3 rounded-lg border leading-tight animate-in fade-in slide-in-from-bottom-2 duration-300
+                      ${scan.success ? 'border-green-500/10 bg-green-500/5' : 'border-red-500/10 bg-red-500/5'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-full ${scan.success ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                        {scan.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">{scan.attendee_name || 'Invalid Ticket'}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          {scan.ticket_code} • {scan.events?.title || 'Unknown Event'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={scan.success ? 'secondary' : 'destructive'} className="text-[10px] px-1.5 shadow-none">
+                        {scan.success ? (scan.tier_name || 'Checked In') : (scan.error || 'Failed')}
+                      </Badge>
+                      <p className="text-[9px] text-muted-foreground mt-1">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

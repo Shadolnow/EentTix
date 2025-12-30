@@ -403,7 +403,7 @@ const PublicEvent = () => {
               customerName: formData.name,
               customerEmail: formData.email,
               eventTitle: event.title,
-              ticketType: selectedTier?.name || 'General Admission',
+              ticketType: selectedTier?.name || 'Standard Pass',
               quantity: 1,
               totalAmount: selectedTier?.price || 0,
               paymentMethod: paymentType

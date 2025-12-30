@@ -108,7 +108,7 @@ export const TicketCard = ({ ticket, compact = false, showActions = true }: Tick
     }
   };
 
-  const tierName = ticket.tier_name || ticket.ticket_tiers?.name || 'GENERAL ADMISSION';
+  const tierName = ticket.tier_name || ticket.ticket_tiers?.name || 'ENTRY PASS';
 
   return (
     <div className="space-y-4">

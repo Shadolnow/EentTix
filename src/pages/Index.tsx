@@ -284,7 +284,7 @@ const Index = () => {
               {
                 icon: Ticket,
                 title: "Flexible Ticketing",
-                description: "Create free or paid events with multiple ticket tiers. VIP, Early Bird, or General Admission.",
+                description: "Create free or paid events with multiple ticket tiers. VIP, Early Bird, or Standard Entry.",
                 color: "primary"
               },
               {
@@ -362,7 +362,7 @@ const Index = () => {
               <div className="absolute top-0 left-0 w-full h-1 bg-muted-foreground/50 rounded-t-2xl" />
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-foreground">General Admission</h3>
+                  <h3 className="text-lg font-bold text-foreground">Standard Entry</h3>
                   <p className="text-sm text-muted-foreground">Standard Access</p>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">FREE</span>

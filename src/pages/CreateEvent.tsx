@@ -62,7 +62,7 @@ const CreateEvent = () => {
     toast.info("AI Assistant is crafting your event details...");
 
     setTimeout(() => {
-      const category = formData.category || "General";
+      const category = formData.category || "Event";
       const newDescription = `Experience the ultimate ${category} event of the year! Join us for an unforgettable experience filled with amazing moments, great networking opportunities, and memories that will last a lifetime. \n\nHighlights:\n✨ Exclusive Venue\n✨ Expert Speakers / Performers\n✨ Networking Sessions\n\nDon't miss out on what promises to be a spectacular gathering of like-minded individuals. Book your tickets now!`;
 
       const newPromotion = `🔥 Limited Early Bird Tickets! 20% OFF until this weekend!`;
