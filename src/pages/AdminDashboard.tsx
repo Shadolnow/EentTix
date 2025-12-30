@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Users, Calendar, Ticket, TrendingUp, Shield, Mail, ArrowLeft, Loader2, Send, Trash2, CheckCircle2, Building2, Tag } from 'lucide-react';
+import { Users, Calendar, Ticket, TrendingUp, Shield, Mail, ArrowLeft, Loader2, Send, Trash2, CheckCircle2, Building2, Tag, Banknote, BarChart3, Settings, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PromoCodeManager } from '@/components/PromoCodeManager';
 
@@ -453,6 +453,47 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
+        {/* Quick Actions */}
+        <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-primary/20" onClick={() => navigate('/create-event')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <Plus className="h-6 w-6 mb-2 text-primary" />
+              <span className="font-semibold text-xs sm:text-sm">Create Event</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-blue-500/20" onClick={() => navigate('/admin/events')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <Calendar className="h-6 w-6 mb-2 text-blue-500" />
+              <span className="font-semibold text-xs sm:text-sm">Manage Events</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-green-500/20" onClick={() => navigate('/admin/tickets')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <Ticket className="h-6 w-6 mb-2 text-green-500" />
+              <span className="font-semibold text-xs sm:text-sm">Global Tickets</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-purple-500/20" onClick={() => navigate('/admin/subscriptions')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <Building2 className="h-6 w-6 mb-2 text-purple-500" />
+              <span className="font-semibold text-xs sm:text-sm">Subscriptions</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-orange-500/20" onClick={() => navigate('/analytics')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <BarChart3 className="h-6 w-6 mb-2 text-orange-500" />
+              <span className="font-semibold text-xs sm:text-sm">Analytics</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/50 cursor-pointer transition-colors hover:shadow-lg border-gray-500/20" onClick={() => navigate('/mobile-settings')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center pt-6">
+              <Settings className="h-6 w-6 mb-2 text-gray-500" />
+              <span className="font-semibold text-xs sm:text-sm">Settings</span>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList>
@@ -640,22 +681,47 @@ const AdminDashboard = () => {
           <TabsContent value="events" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Event Overview</CardTitle>
-                <CardDescription>
-                  Monitor all events across the platform
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Event Overview</CardTitle>
+                    <CardDescription>
+                      Monitor all events across the platform
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => navigate('/admin/events')}>View All Events</Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Event management coming soon</p>
-                  <p className="text-sm mt-2">
-                    View and manage all events from the{' '}
-                    <Link to="/admin/events" className="text-primary hover:underline">
-                      Events page
-                    </Link>
-                  </p>
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Tickets</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No events found</TableCell>
+                      </TableRow>
+                    ) : (
+                      events.slice(0, 5).map(event => (
+                        <TableRow key={event.id}>
+                          <TableCell className="font-medium">{event.title}</TableCell>
+                          <TableCell>{new Date(event.event_date).toLocaleDateString()}</TableCell>
+                          <TableCell>{event.tickets_issued}</TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/event/${event.id}/tickets`)}>
+                              Manage
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
