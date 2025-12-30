@@ -13,7 +13,7 @@ import { useAuth } from '@/components/AuthProvider';
 
 const Scan = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading, isAdmin, isOrganizer } = useAuth();
 
   // State
   const [isScanning, setIsScanning] = useState(false);
@@ -79,6 +79,15 @@ const Scan = () => {
 
   // --- Effects ---
   useEffect(() => {
+    if (loading) return; // Wait for profile fetch
+
+    // RBAC Check
+    if (user && !isAdmin && !isOrganizer) {
+      toast.error("Unauthorized: Only organizers can access scanner");
+      navigate('/');
+      return;
+    }
+
     const handleOnline = () => { setIsOnline(true); toast.success('Online'); };
     const handleOffline = () => { setIsOnline(false); toast.warning('Offline'); };
     window.addEventListener('online', handleOnline);
@@ -90,7 +99,7 @@ const Scan = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [user]);
+  }, [user, loading, isAdmin, isOrganizer, navigate]);
 
   // --- Caching Logic ---
   const loadTicketCache = async () => {
@@ -319,9 +328,9 @@ const Scan = () => {
               <div className="relative w-full h-full">
                 <Scanner
                   onScan={handleScan}
-                  onError={(err) => {
+                  onError={(err: any) => {
                     console.error("Scanner Error:", err);
-                    setIsScanning(false);
+                    setIsScanning(false); // Stop scanning to show error UI
                     if (err?.message?.includes('Permission') || err?.name === 'NotAllowedError') {
                       setCameraError('Camera permission denied. Please allow camera access.');
                     } else {
@@ -335,7 +344,6 @@ const Scan = () => {
                     container: { width: '100%', height: '100%' },
                     video: { width: '100%', height: '100%', objectFit: 'cover' }
                   }}
-                  components={{ audio: false }} // We handle audio manually
                   scanDelay={500} // Reduce load
                   allowMultiple={true}
                 />

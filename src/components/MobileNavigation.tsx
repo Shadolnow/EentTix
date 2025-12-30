@@ -14,31 +14,50 @@ const navItems = [
 export const MobileNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, isOrganizer } = useAuth(); // Now includes RBAC flags
 
   // Don't show on auth page or ticket viewer
-  const hiddenPaths = ['/auth', '/ticket/', '/e/'];
+  const hiddenPaths = ['/auth', '/ticket/', '/e/', '/staff-login'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path));
-  
+
   if (shouldHide) return null;
 
-  const visibleItems = navItems.filter(item => !item.auth || user);
+  const getPath = (item: any) => {
+    if (item.label === 'Profile') {
+      return isAdmin ? '/dashboard' : '/mobile-settings';
+    }
+    return item.path;
+  };
+
+  const visibleItems = navItems.filter(item => {
+    // 1. Check Auth requirement
+    if (item.auth && !user) return false;
+
+    // 2. Hide Scan for regular users
+    if (item.label === 'Scan') {
+      return isOrganizer || isAdmin;
+    }
+
+    // 3. Hide Profile for now? No, we redirect it.
+    return true;
+  });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
         {visibleItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path !== '/' && location.pathname.startsWith(item.path));
-          
+          const targetPath = getPath(item);
+          const isActive = location.pathname === targetPath ||
+            (targetPath !== '/' && location.pathname.startsWith(targetPath));
+
           return (
             <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
+              key={item.label} // Key by label as path might change
+              onClick={() => navigate(targetPath)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl min-w-[64px] transition-all duration-200 active:scale-95",
-                isActive 
-                  ? "text-primary bg-primary/10" 
+                isActive
+                  ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
