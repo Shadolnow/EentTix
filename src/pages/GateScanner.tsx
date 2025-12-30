@@ -285,9 +285,9 @@ const GateScanner = () => {
                         </CardContent>
                     </Card>
                 ) : (
-                    // Show Scanner
+                    // Show Scanner with Gatescan-style UI
                     <div className="space-y-4">
-                        <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary border-2 border-primary/30">
+                        <div className="scanner-container relative">
                             {isScanning && !cameraError ? (
                                 <>
                                     <Scanner
@@ -304,22 +304,31 @@ const GateScanner = () => {
                                             video: { objectFit: 'cover' },
                                         }}
                                     />
+
+                                    {/* Scanner overlay */}
+                                    <div className="absolute inset-0 pointer-events-none">
+                                        {/* Scanner frame with gradient corners */}
+                                        <div className="scanner-frame absolute inset-0" />
+
+                                        {/* Animated scan line */}
+                                        <div className="absolute left-4 right-4 top-4 h-1 scan-line rounded-full" />
+                                    </div>
+
                                     {/* Corner markers */}
-                                    <div className="absolute top-4 left-4 w-12 h-12 border-t-4 border-l-4 border-primary rounded-tl-lg pointer-events-none" />
-                                    <div className="absolute top-4 right-4 w-12 h-12 border-t-4 border-r-4 border-primary rounded-tr-lg pointer-events-none" />
-                                    <div className="absolute bottom-4 left-4 w-12 h-12 border-b-4 border-l-4 border-primary rounded-bl-lg pointer-events-none" />
-                                    <div className="absolute bottom-4 right-4 w-12 h-12 border-b-4 border-r-4 border-primary rounded-br-lg pointer-events-none" />
+                                    <div className="corner-marker top-left" />
+                                    <div className="corner-marker top-right" />
+                                    <div className="corner-marker bottom-left" />
+                                    <div className="corner-marker bottom-right" />
                                 </>
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 min-h-[300px]">
                                     {cameraError ? (
                                         <>
                                             <XCircle className="w-12 h-12 mb-4 text-destructive" />
-                                            <p className="text-center mb-2">Camera Error</p>
-                                            <p className="text-xs text-center">{cameraError}</p>
+                                            <p className="text-center mb-2 font-semibold">Camera Error</p>
+                                            <p className="text-xs text-center mb-4">{cameraError}</p>
                                             <Button
                                                 variant="outline"
-                                                className="mt-4"
                                                 onClick={() => {
                                                     setCameraError(null);
                                                     setIsScanning(true);
@@ -335,20 +344,21 @@ const GateScanner = () => {
                             )}
                         </div>
 
-                        {/* Scanning indicator */}
+                        {/* Scanning indicator with pulse */}
                         {isScanning && !cameraError && (
                             <div className="flex items-center justify-center gap-3">
                                 <div className="relative">
                                     <div className="w-3 h-3 rounded-full bg-primary" />
-                                    <div className="absolute inset-0 w-3 h-3 rounded-full bg-primary animate-ping" />
+                                    <div className="absolute inset-0 w-3 h-3 rounded-full bg-primary pulse-ring" />
                                 </div>
                                 <span className="text-sm font-mono text-muted-foreground">
-                                    Point camera at QR code...
+                                    Scanning for QR codes...
                                 </span>
                             </div>
                         )}
                     </div>
                 )}
+
 
                 {/* Manual Entry Toggle */}
                 <div className="mt-6">
@@ -386,8 +396,8 @@ const GateScanner = () => {
                                 >
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${record.status === 'valid' ? 'bg-green-500' :
-                                                record.status === 'already-used' ? 'bg-yellow-500' :
-                                                    'bg-red-500'
+                                            record.status === 'already-used' ? 'bg-yellow-500' :
+                                                'bg-red-500'
                                             }`} />
                                         <span className="truncate max-w-[150px]">
                                             {record.attendeeName || record.ticketCode}
