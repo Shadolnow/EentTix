@@ -289,12 +289,6 @@ const PublicEvent = () => {
         }
       }
 
-<<<<<<< Updated upstream
-      // EMAIL VERIFICATION IS OPTIONAL
-      // We don't block the flow, just log if they haven't verified
-      if (!isEmailVerified && !verificationSent) {
-        console.log("[VERIFICATION FLOW] User proceeding without email verification (optional)");
-=======
       // Use Supabase Native Auth for OTP
       const { error } = await supabase.auth.signInWithOtp({
         email: validated.email,
@@ -305,8 +299,10 @@ const PublicEvent = () => {
 
       if (error) {
         throw error;
->>>>>>> Stashed changes
       }
+
+      setVerificationSent(true);
+      toast.success('Verification code sent to your email!');
 
       if (event.is_free) {
         // Free Event: Create ticket immediately
@@ -315,32 +311,21 @@ const PublicEvent = () => {
       } else {
         // Paid Event: Show payment dialog
         console.log("[PAYMENT FLOW] Paid event detected - opening payment dialog");
-        console.log("[PAYMENT FLOW] Event price:", event.ticket_price);
-        console.log("[PAYMENT FLOW] Has QR:", !!event.qr_code_url);
-        console.log("[PAYMENT FLOW] Has UPI ID:", !!event.upi_id);
         setShowPaymentDialog(true);
         setLoading(false);
-        console.log("[PAYMENT FLOW] Payment dialog state set to true");
       }
 
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-<<<<<<< Updated upstream
-        toast.error('Something went wrong. Please try again.');
-=======
         toast.error(error.message || 'Failed to send OTP. Please check your email.');
->>>>>>> Stashed changes
         console.error(error);
       }
       setLoading(false);
     }
   };
 
-<<<<<<< Updated upstream
-  const createTicket = async (paymentType: 'upi' | 'cash' = 'upi', providedUpiRef?: string) => {
-=======
   const verifyOtp = async () => {
     setLoading(true);
     try {
@@ -352,7 +337,6 @@ const PublicEvent = () => {
 
       if (error) throw error;
 
-      // If we don't have a session, verification failed or was magic link
       if (!data.session) {
         throw new Error("Verification failed or session not created.");
       }
@@ -373,8 +357,7 @@ const PublicEvent = () => {
     }
   };
 
-  const createTicket = async (paymentType: 'online' | 'venue' = 'online') => {
->>>>>>> Stashed changes
+  const createTicket = async (paymentType: 'upi' | 'cash' = 'upi', providedUpiRef?: string) => {
     try {
       setLoading(true);
 

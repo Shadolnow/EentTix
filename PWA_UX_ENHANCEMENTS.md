@@ -83,17 +83,29 @@
 - `haptic.click()` - Light tap + click sound
 - `haptic.success()` - Success pattern + chime
 - `haptic.error()` - Error pattern + sound
+
+#### ✅ Site Analytics & Visitor Tracking
+- **Component**: `AnalyticsTracker.tsx` (newly created)
+- **Database**: `site_visits` table + statistics function
+- **Features**:
+  - Automatic page view tracking
+  - Unique visitor identification (localStorage)
+  - Admin dashboard visualization (30-day stats)
+  - Privacy-focused tracking
+  - Referrer and device metadata tracking
 - `haptic.payment()` - Medium vibration + ching sound
 
 ## 📁 Files Created/Modified
 
 ### New Files:
-1. `src/hooks/usePullToRefresh.ts`
+1. `src/hooks/usePullToRefresh.tsx`
 2. `src/components/PushNotificationPrompt.tsx`
 3. `src/components/ThemeProvider.tsx`
 4. `src/components/ThemeToggle.tsx`
 5. `src/components/AppSettings.tsx`
 6. `src/lib/feedback.ts`
+7. `src/components/AnalyticsTracker.tsx`
+8. `supabase/migrations/20251231_site_analytics.sql`
 
 ### Modified Files:
 1. `src/App.tsx` - Added PushNotificationPrompt

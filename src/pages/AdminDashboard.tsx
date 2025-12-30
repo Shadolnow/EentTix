@@ -28,6 +28,8 @@ interface Stats {
   totalEvents: number;
   totalTickets: number;
   recentSignups: number;
+  siteViews: number;
+  uniqueVisitors: number;
 }
 
 const AdminDashboard = () => {
@@ -36,7 +38,14 @@ const AdminDashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalEvents: 0, totalTickets: 0, recentSignups: 0 });
+  const [stats, setStats] = useState<Stats>({
+    totalUsers: 0,
+    totalEvents: 0,
+    totalTickets: 0,
+    recentSignups: 0,
+    siteViews: 0,
+    uniqueVisitors: 0
+  });
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [updateMessage, setUpdateMessage] = useState('');
@@ -84,10 +93,14 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       // Load statistics
-      const [usersResponse, eventsResponse, ticketsResponse] = await Promise.all([
+      const [usersResponse, eventsResponse, ticketsResponse, siteStatsResponse] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('events').select('*', { count: 'exact', head: true }),
         supabase.from('tickets').select('*', { count: 'exact', head: true }),
+        supabase.rpc('get_site_statistics', {
+          start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+          end_date: new Date().toISOString()
+        })
       ]);
 
       // Get recent signups (last 7 days)
@@ -99,11 +112,15 @@ const AdminDashboard = () => {
         .select('*', { count: 'exact', head: true })
         .gte('created_at', sevenDaysAgo.toISOString());
 
+      const siteStats = siteStatsResponse.data ? siteStatsResponse.data[0] : { total_views: 0, unique_visitors: 0 };
+
       setStats({
         totalUsers: usersResponse.count || 0,
         totalEvents: eventsResponse.count || 0,
         totalTickets: ticketsResponse.count || 0,
         recentSignups: recentSignupsCount || 0,
+        siteViews: Number(siteStats?.total_views || 0),
+        uniqueVisitors: Number(siteStats?.unique_visitors || 0)
       });
 
       // Load events list
@@ -443,12 +460,23 @@ const AdminDashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Health</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Site Visitors</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">Healthy</div>
-              <p className="text-xs text-muted-foreground">All systems operational</p>
+              <div className="text-2xl font-bold">{stats.uniqueVisitors}</div>
+              <p className="text-xs text-muted-foreground">Unique visitors (30d)</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Page Views</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.siteViews}</div>
+              <p className="text-xs text-muted-foreground">Total views (30d)</p>
             </CardContent>
           </Card>
         </div>
