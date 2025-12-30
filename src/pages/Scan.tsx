@@ -370,10 +370,11 @@ const Scan = () => {
 
   const saveOfflineScan = (ticketId: string) => {
     const offlineScans = JSON.parse(localStorage.getItem(`offline_scans_${user?.id}`) || '[]');
-    if (!offlineScans.includes(ticketId)) {
+    if (!offlineScans.some((s: any) => s.id === ticketId)) {
+      const now = new Date().toISOString();
       offlineScans.push({
         id: ticketId,
-        validated_at: new Date().toISOString()
+        validated_at: now
       });
       localStorage.setItem(`offline_scans_${user?.id}`, JSON.stringify(offlineScans));
 
@@ -382,7 +383,8 @@ const Scan = () => {
       const ticket = updatedCache.get(ticketId);
       if (ticket) {
         ticket.is_validated = true;
-        ticket.validated_at = new Date().toISOString();
+        ticket.checked_in_at = now;
+        ticket.validated_at = now;
         setTicketCache(updatedCache);
       }
     }

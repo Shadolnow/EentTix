@@ -36,7 +36,7 @@ const Attendance = () => {
       navigate('/auth');
       return;
     }
-    
+
     fetchStats();
     fetchEvents();
 
@@ -63,13 +63,13 @@ const Attendance = () => {
 
   const fetchEvents = async () => {
     if (!user) return;
-    
+
     const { data } = await (supabase as any)
       .from('events')
       .select('*')
       .eq('user_id', user.id)
       .order('event_date', { ascending: false });
-    
+
     if (data) setEvents(data);
   };
 
@@ -98,7 +98,11 @@ const Attendance = () => {
 
       // Recent scans (last 20)
       const recentScans = validated
-        .sort((a: any, b: any) => new Date(b.validated_at).getTime() - new Date(a.validated_at).getTime())
+        .sort((a: any, b: any) => {
+          const timeA = new Date(a.checked_in_at || a.validated_at).getTime();
+          const timeB = new Date(b.checked_in_at || b.validated_at).getTime();
+          return timeB - timeA;
+        })
         .slice(0, 20);
 
       // Event-wise statistics
@@ -242,7 +246,7 @@ const Attendance = () => {
                             <span className="text-sm font-medium">Validated</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(scan.validated_at), 'MMM d, h:mm a')}
+                            {format(new Date(scan.checked_in_at || scan.validated_at), 'MMM d, h:mm a')}
                           </p>
                         </div>
                       </div>
@@ -285,7 +289,7 @@ const Attendance = () => {
                             <p className="text-xs text-muted-foreground">attendance</p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Total Tickets</p>
