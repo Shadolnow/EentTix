@@ -517,8 +517,7 @@ export const EventCustomization = ({ eventId, userId, isFreeEvent = true, initia
           qr_code_url: paymentQrImageUrl || null,
           discount_percent: discountPercent,
           event_date: eventDate ? formatDateForDb(eventDate) : null, // Convert local time to UTC
-          venue: venue || null, // Update venue
-          menu_pdf_url: menuPdfUrl || null // Menu PDF
+          venue: venue || null // Update venue
         })
         .eq('id', eventId);
 
