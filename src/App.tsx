@@ -44,6 +44,7 @@ const DoorStaffScanner = lazy(() => import("./pages/DoorStaffScanner"));
 const MyTickets = lazy(() => import("./pages/MyTickets"));
 const TicketArchive = lazy(() => import("./pages/TicketArchive"));
 const ScannerTest = lazy(() => import("./pages/ScannerTest"));
+const CameraDebug = lazy(() => import("./pages/CameraDebug"));
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const AnimatedRoutes = () => {
           <Route path="/admin/archive" element={<AuthRoute><PageTransition><TicketArchive /></PageTransition></AuthRoute>} />
           <Route path="/scanner/:eventId" element={<PageTransition><DoorStaffScanner /></PageTransition>} />
           <Route path="/scanner-test" element={<PageTransition><ScannerTest /></PageTransition>} />
+          <Route path="/camera-debug" element={<PageTransition><CameraDebug /></PageTransition>} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
