@@ -94,7 +94,7 @@ const AnimatedRoutes = () => {
           <Route path="/global-tickets" element={<AuthRoute><PageTransition><GlobalTickets /></PageTransition></AuthRoute>} />
           <Route path="/admin/tickets" element={<AuthRoute><PageTransition><AllTicketsPage /></PageTransition></AuthRoute>} />
           <Route path="/admin/archive" element={<AuthRoute><PageTransition><TicketArchive /></PageTransition></AuthRoute>} />
-          <Route path="/scanner/:eventId" element={<PageTransition><DoorStaffScanner /></PageTransition>} />
+          <Route path="/scanner/:eventId" element={<PageTransition><GateScanner /></PageTransition>} />
           <Route path="/gate/:eventId" element={<PageTransition><GateScanner /></PageTransition>} />
           <Route path="/scanner-test" element={<PageTransition><ScannerTest /></PageTransition>} />
           <Route path="/camera-debug" element={<PageTransition><CameraDebug /></PageTransition>} />
