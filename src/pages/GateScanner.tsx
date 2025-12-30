@@ -16,9 +16,12 @@ interface ScanRecord {
     timestamp: Date;
 }
 
+import { useAuth } from '@/components/AuthProvider';
+
 const GateScanner = () => {
     const { eventId } = useParams();
     const navigate = useNavigate();
+    const { user, loading } = useAuth();
 
     // State
     const [isScanning, setIsScanning] = useState(true);
@@ -32,11 +35,37 @@ const GateScanner = () => {
     const [cameraError, setCameraError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (loading) return; // Wait for auth check
+
+        const checkAccess = () => {
+            // 1. Allow if Admin (supabase user) is logged in
+            if (user) return true;
+
+            // 2. Allow if Staff Session exists and matches event
+            const session = sessionStorage.getItem('staff_session');
+            if (session) {
+                try {
+                    const data = JSON.parse(session);
+                    if (data.eventId === eventId) return true;
+                } catch (e) {
+                    console.error("Invalid session");
+                }
+            }
+
+            return false;
+        };
+
+        if (!checkAccess()) {
+            toast.error("Access Denied. Please login.");
+            navigate(`/staff-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return;
+        }
+
         if (eventId) {
             fetchEventDetails();
             fetchStats();
         }
-    }, [eventId]);
+    }, [eventId, user, navigate, loading]);
 
     const speak = (text: string) => {
         if (!isVoiceEnabled || !window.speechSynthesis) return;

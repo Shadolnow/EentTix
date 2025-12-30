@@ -18,7 +18,7 @@ export const DoorStaffManager = ({ eventId }: DoorStaffManagerProps) => {
     const [doorStaff, setDoorStaff] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [addDialogOpen, setAddDialogOpen] = useState(false);
-    const [newStaffEmail, setNewStaffEmail] = useState('');
+    const [newStaff, setNewStaff] = useState({ name: '', email: '', phone: '', pin: '' });
     const [adding, setAdding] = useState(false);
 
     useEffect(() => {
@@ -45,59 +45,59 @@ export const DoorStaffManager = ({ eventId }: DoorStaffManagerProps) => {
     };
 
     const handleAddStaff = async () => {
-        if (!newStaffEmail.trim()) {
+        if (!newStaff.email.trim()) {
             toast.error('Please enter an email address');
             return;
         }
 
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(newStaffEmail)) {
+        if (!emailRegex.test(newStaff.email)) {
             toast.error('Please enter a valid email address');
             return;
         }
 
         setAdding(true);
         try {
-            // Generate access code via RPC
-            const { data: codeData, error: codeError } = await supabase.rpc('generate_access_code');
-
-            if (codeError) {
-                // Fallback to client-side generation
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-                const { error } = await supabase
-                    .from('door_staff')
-                    .insert({
-                        event_id: eventId,
-                        user_email: newStaffEmail.toLowerCase(),
-                        access_code: code
-                    });
-
-                if (error) throw error;
-
-                toast.success(`Door staff added! Access code: ${code}`, {
-                    description: 'Share this code with the staff member',
-                    duration: 10000
-                });
-            } else {
-                const { error } = await supabase
-                    .from('door_staff')
-                    .insert({
-                        event_id: eventId,
-                        user_email: newStaffEmail.toLowerCase(),
-                        access_code: codeData
-                    });
-
-                if (error) throw error;
-
-                toast.success(`Door staff added! Access code: ${codeData}`, {
-                    description: 'Share this code with the staff member',
-                    duration: 10000
-                });
+            // Use custom PIN or generate one
+            let code = newStaff.pin;
+            if (!code || code.length < 4) {
+                code = Math.floor(100000 + Math.random() * 900000).toString();
             }
 
-            setNewStaffEmail('');
+            const payload: any = {
+                event_id: eventId,
+                user_email: newStaff.email.toLowerCase(),
+                access_code: code,
+                // Try to insert new fields (if schema supports it)
+                name: newStaff.name || null,
+                phone: newStaff.phone || null
+            };
+
+            const { error } = await supabase
+                .from('door_staff')
+                .insert(payload);
+
+            if (error) {
+                // Determine if error is due to missing columns or duplicate email
+                if (error.code === '42703') { // Undefined column
+                    console.warn("Schema missing name/phone columns. Inserting basic info only.");
+                    // Retry without new fields
+                    delete payload.name;
+                    delete payload.phone;
+                    const { error: retryError } = await supabase.from('door_staff').insert(payload);
+                    if (retryError) throw retryError;
+                } else {
+                    throw error;
+                }
+            }
+
+            toast.success(`Door staff added! PIN: ${code}`, {
+                description: 'Staff can now login at /staff-login',
+                duration: 10000
+            });
+
+            setNewStaff({ name: '', email: '', phone: '', pin: '' });
             setAddDialogOpen(false);
             fetchDoorStaff();
         } catch (error: any) {
@@ -105,7 +105,7 @@ export const DoorStaffManager = ({ eventId }: DoorStaffManagerProps) => {
             if (error.code === '23505') {
                 toast.error('This email already has access to this event');
             } else {
-                toast.error('Failed to add door staff');
+                toast.error('Failed to add door staff: ' + error.message);
             }
         } finally {
             setAdding(false);
@@ -198,23 +198,53 @@ export const DoorStaffManager = ({ eventId }: DoorStaffManagerProps) => {
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4 py-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="staff-name">Staff Name</Label>
+                                            <Input
+                                                id="staff-name"
+                                                placeholder="Name"
+                                                value={newStaff.name}
+                                                onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="staff-phone">Phone Number</Label>
+                                            <Input
+                                                id="staff-phone"
+                                                placeholder="Phone"
+                                                value={newStaff.phone}
+                                                onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="staff-email">Staff Email Address</Label>
+                                        <Label htmlFor="staff-email">Staff Email Address *</Label>
                                         <Input
                                             id="staff-email"
                                             type="email"
                                             placeholder="staff@example.com"
-                                            value={newStaffEmail}
-                                            onChange={(e) => setNewStaffEmail(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAddStaff()}
+                                            value={newStaff.email}
+                                            onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="staff-pin">Access PIN (Leave empty to auto-generate)</Label>
+                                        <Input
+                                            id="staff-pin"
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={6}
+                                            placeholder="6-digit PIN"
+                                            value={newStaff.pin}
+                                            onChange={(e) => setNewStaff({ ...newStaff, pin: e.target.value.replace(/\D/g, '') })}
                                         />
                                     </div>
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <p className="text-sm font-semibold text-blue-900 mb-1">How it works:</p>
                                         <ul className="text-xs text-blue-800 space-y-1">
-                                            <li>• System generates a unique 6-digit code</li>
-                                            <li>• Share code with staff member</li>
-                                            <li>• Staff enters code at scanner page</li>
+                                            <li>• Staff member login: <strong>/staff-login</strong></li>
+                                            <li>• Use Email and PIN to validation</li>
                                             <li>• Access expires after 7 days (can be extended)</li>
                                         </ul>
                                     </div>
@@ -224,7 +254,7 @@ export const DoorStaffManager = ({ eventId }: DoorStaffManagerProps) => {
                                         Cancel
                                     </Button>
                                     <Button onClick={handleAddStaff} disabled={adding}>
-                                        {adding ? 'Adding...' : 'Generate Access Code'}
+                                        {adding ? 'Adding...' : 'Add Staff Member'}
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
