@@ -11,6 +11,7 @@ import { Calendar, MapPin, Ticket, IndianRupee, Search, Filter, Users, Archive, 
 import { toast } from 'sonner';
 import { EventGridSkeleton } from '@/components/skeletons/EventCardSkeleton';
 import { format, isAfter, isPast, subDays, startOfDay } from 'date-fns';
+import { PartyBackground } from '@/components/PartyElements';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Categories' },
@@ -328,8 +329,9 @@ const PublicEvents = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 animate-in fade-in-50 duration-500">
-      <div className="container mx-auto max-w-6xl">
+    <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+      <PartyBackground />
+      <div className="container mx-auto max-w-6xl relative z-10">
         {/* Header */}
         <div className="text-center mb-8 animate-in slide-in-from-top-5 duration-700">
           <h1 className="text-5xl md:text-6xl font-bold text-gradient-cyber mb-4 animate-gradient-x">

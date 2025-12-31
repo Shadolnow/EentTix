@@ -1,33 +1,39 @@
-import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import {
+    Palette,
+    Wine,
+    Cocktail,
+    GlassWater,
+    Beer,
+    Music,
+    Sparkles,
+    Users,
+    PartyPopper,
+    Zap,
+    Star,
+    Flame,
+    Camera,
+    Brush,
+    Utensils,
+    PlaySquare,
+    Ticket
+} from 'lucide-react';
 
 // Party-themed background with animated elements
 export const PartyBackground = () => {
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
             {/* Animated gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-pink-900/20 to-orange-900/20 animate-gradient-shift" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.15),rgba(6,182,212,0.1),transparent_70%)] animate-pulse-slow" />
+            <div className="absolute inset-0 bg-gradient-to-br from-background via-background/90 to-background/80" />
 
-            {/* Floating party emojis */}
-            <div className="absolute inset-0">
-                {['🎉', '🎊', '🎈', '✨', '🎆', '🌟', '💫', '🎇'].map((emoji, i) => (
-                    <div
-                        key={i}
-                        className="absolute text-2xl md:text-5xl opacity-20 animate-float"
-                        style={{
-                            left: `${(i * 12.5) + 5}%`,
-                            top: `${Math.random() * 100}%`,
-                            animationDelay: `${i * 0.5}s`,
-                            animationDuration: `${5 + Math.random() * 3}s`
-                        }}
-                    >
-                        {emoji}
-                    </div>
-                ))}
-            </div>
+            {/* Floating sophisticated elements */}
+            <FloatingPartyElements />
 
-            {/* Sparkles */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,215,0,0.1),transparent_50%)] animate-pulse" />
+            {/* Subtle mesh gradients */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/20 rounded-full blur-[120px] animate-pulse-slow" />
         </div>
     );
 };
@@ -151,37 +157,126 @@ export const PartyCard = ({ children, className = '' }: { children: React.ReactN
     );
 };
 
-// Floating party elements animation
+// Floating sophisticated party elements
 export const FloatingPartyElements = () => {
-    const [elements, setElements] = useState<{ id: number; x: number; y: number; emoji: string; delay: number }[]>([]);
+    const assets = [
+        { icon: Palette, color: 'text-pink-400', glow: 'shadow-pink-500/50' },
+        { icon: Brush, color: 'text-blue-400', glow: 'shadow-blue-500/50' },
+        { icon: Wine, color: 'text-red-400', glow: 'shadow-red-500/50' },
+        { icon: Cocktail, color: 'text-orange-400', glow: 'shadow-orange-500/50' },
+        { icon: GlassWater, color: 'text-sky-400', glow: 'shadow-sky-500/50' },
+        { icon: Beer, color: 'text-yellow-400', glow: 'shadow-yellow-500/50' },
+        { icon: Music, color: 'text-purple-400', glow: 'shadow-purple-500/50' },
+        { icon: Sparkles, color: 'text-amber-400', glow: 'shadow-amber-500/50' },
+        { icon: PartyPopper, color: 'text-emerald-400', glow: 'shadow-emerald-500/50' },
+        { icon: Star, color: 'text-yellow-300', glow: 'shadow-yellow-400/50' },
+        { icon: Camera, color: 'text-violet-400', glow: 'shadow-violet-500/50' },
+        { icon: Utensils, color: 'text-rose-400', glow: 'shadow-rose-500/50' },
+        { icon: Ticket, color: 'text-indigo-400', glow: 'shadow-indigo-500/50' },
+    ];
 
-    useEffect(() => {
-        const emojis = ['🎈', '🎊', '✨', '🎉', '💫', '🌟', '🎆', '🎇'];
-        const newElements = Array.from({ length: 15 }, (_, i) => ({
+    // Create a larger pool for better density in margins
+    const elements = Array.from({ length: 40 }, (_, i) => {
+        const side = i % 2 === 0 ? 'left' : 'right';
+        const config = assets[Math.floor(Math.random() * assets.length)];
+        // Wide range for gutters
+        const xPos = side === 'left' ? Math.random() * 25 : 75 + Math.random() * 25;
+
+        return {
             id: i,
-            x: Math.random() * 100,
+            x: xPos,
             y: Math.random() * 100,
-            emoji: emojis[Math.floor(Math.random() * emojis.length)],
-            delay: Math.random() * 5
-        }));
-        setElements(newElements);
-    }, []);
+            Icon: config.icon,
+            color: config.color,
+            delay: Math.random() * 20,
+            duration: 15 + Math.random() * 25,
+            scale: 0.6 + Math.random() * 1.4,
+            rotation: Math.random() * 360,
+            drift: (Math.random() - 0.5) * 15 // Horizontal drift
+        };
+    });
 
     return (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
             {elements.map((el) => (
-                <div
+                <motion.div
                     key={el.id}
-                    className="absolute text-2xl md:text-4xl opacity-30 animate-float-slow"
-                    style={{
-                        left: `${el.x}%`,
-                        top: `${el.y}%`,
-                        animationDelay: `${el.delay}s`
+                    className={`absolute ${el.color}`}
+                    initial={{
+                        x: `${el.x}%`,
+                        y: `${el.y}%`,
+                        rotate: el.rotation,
+                        scale: 0,
+                        opacity: 0
+                    }}
+                    animate={{
+                        y: [`${el.y}%`, `${(el.y - 40 + 100) % 100}%`],
+                        x: [`${el.x}%`, `${el.x + el.drift}%`, `${el.x}%`],
+                        rotate: [el.rotation, el.rotation + 360],
+                        scale: [el.scale * 0.9, el.scale * 1.1, el.scale * 0.9],
+                        opacity: [0, 0.6, 0.6, 0]
+                    }}
+                    transition={{
+                        duration: el.duration,
+                        repeat: Infinity,
+                        delay: el.delay,
+                        ease: "linear"
                     }}
                 >
-                    {el.emoji}
-                </div>
+                    <el.Icon
+                        size={Math.random() > 0.8 ? 80 : 56}
+                        strokeWidth={1.5}
+                        className="drop-shadow-[0_0_15px_currentColor]"
+                    />
+                </motion.div>
             ))}
+
+            {/* Dancing Silhouettes - Significantly more visible */}
+            <div className="absolute bottom-0 left-0 w-1/3 h-1/2 opacity-[0.08] pointer-events-none overflow-hidden hidden lg:block">
+                {[1, 2, 3, 4].map((_, i) => (
+                    <motion.div
+                        key={`sil-l-${i}`}
+                        className="absolute bottom-[-40px] text-primary"
+                        animate={{
+                            y: [0, -30, 0],
+                            rotate: [-3, 3, -3],
+                            scale: [1, 1.1, 1]
+                        }}
+                        transition={{
+                            duration: 3 + i,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: i * 0.5
+                        }}
+                        style={{ left: `${(i - 1) * 30}%` }}
+                    >
+                        <Users size={350} strokeWidth={0.5} />
+                    </motion.div>
+                ))}
+            </div>
+
+            <div className="absolute bottom-0 right-0 w-1/3 h-1/2 opacity-[0.08] pointer-events-none overflow-hidden hidden lg:block">
+                {[1, 2, 3, 4].map((_, i) => (
+                    <motion.div
+                        key={`sil-r-${i}`}
+                        className="absolute bottom-[-40px] text-accent"
+                        animate={{
+                            y: [0, -35, 0],
+                            rotate: [3, -3, 3],
+                            scale: [1, 1.1, 1]
+                        }}
+                        transition={{
+                            duration: 3.5 + i,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: i * 0.7
+                        }}
+                        style={{ right: `${(i - 1) * 30}%` }}
+                    >
+                        <Users size={350} strokeWidth={0.5} />
+                    </motion.div>
+                ))}
+            </div>
         </div>
     );
 };
