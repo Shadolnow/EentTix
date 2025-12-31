@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, MapPin, Ticket, IndianRupee, Search, Filter, Users, Archive, Sparkles, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { EventGridSkeleton } from '@/components/skeletons/EventCardSkeleton';
-import { format, isAfter, isPast, subDays } from 'date-fns';
+import { format, isAfter, isPast, subDays, startOfDay } from 'date-fns';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Categories' },
@@ -61,16 +61,17 @@ const PublicEvents = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const today = new Date();
-      const oneWeekAgo = subDays(today, 7);
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const oneWeekAgo = subDays(todayStart, 7);
 
       setLoading(true);
 
-      // 1. Fetch Upcoming Events (Future)
+      // 1. Fetch Upcoming Events (Future + Today)
       const { data: upcoming, error: upcomingError } = await supabase
         .from('events')
         .select('id, title, description, event_date, venue, category, ticket_price, is_free, capacity, tickets_issued, image_url')
-        .gte('event_date', today.toISOString())
+        .gte('event_date', todayStart.toISOString())
         .order('event_date', { ascending: true });
 
       if (upcomingError) {
@@ -78,11 +79,11 @@ const PublicEvents = () => {
         toast.error('Failed to load events');
       }
 
-      // 2. Fetch Recent Past Events (Last 7 days)
+      // 2. Fetch Recent Past Events (Last 7 days excluding today)
       const { data: past, error: pastError } = await supabase
         .from('events')
         .select('id, title, description, event_date, venue, category, ticket_price, is_free, capacity, tickets_issued, image_url')
-        .lt('event_date', today.toISOString())
+        .lt('event_date', todayStart.toISOString())
         .gte('event_date', oneWeekAgo.toISOString())
         .order('event_date', { ascending: false }); // Most recent past first
 

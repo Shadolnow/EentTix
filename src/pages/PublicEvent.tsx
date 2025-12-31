@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { SocialShare } from '@/components/SocialShare';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Calendar, MapPin, Download, ArrowLeft, Ticket, Clock, HelpCircle, Image as ImageIcon, CalendarPlus, Users, AlertCircle, Video, Instagram, Facebook, Twitter, Linkedin, Youtube, Globe, Award, CheckCircle2, Copy, IndianRupee, Mail, Info } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isPast, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { TicketCard } from '@/components/TicketCard';
@@ -1337,7 +1337,7 @@ const PublicEvent = () => {
           <Testimonials />
           <ReviewSection
             eventId={eventId!}
-            eventEnded={event ? new Date(event.event_date) < new Date() : false}
+            eventEnded={event ? isPast(endOfDay(new Date(event.event_date))) : false}
             isOrganizer={user?.id === event?.user_id}
           />
         </div>
