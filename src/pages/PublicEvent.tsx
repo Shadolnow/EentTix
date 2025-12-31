@@ -71,21 +71,14 @@ const PublicEvent = () => {
     upiRef: '' // UPI transaction reference
   });
   const [loading, setLoading] = useState(false);
-  const [showOtpInput, setShowOtpInput] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SelectedTier | null>(null);
   const [hasTiers, setHasTiers] = useState(false);
   const [ticketsSold, setTicketsSold] = useState(0);
 
   // Payment States
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
   const [upiTransactionRef, setUpiTransactionRef] = useState(""); // For payment dialog input
-
-  // Magic Link Verification States
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
-  const [pendingBookingData, setPendingBookingData] = useState<any>(null);
 
   // Session storage key for pending booking
   const BOOKING_SESSION_KEY = `booking_${eventId}`;
