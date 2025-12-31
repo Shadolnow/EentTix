@@ -27,6 +27,7 @@ import confetti from 'canvas-confetti';
 import { ReviewSection } from '@/components/ReviewSection';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { useAuth } from '@/components/AuthProvider';
+import { useRealtimePresence } from '@/hooks/useRealtimeAnalytics';
 import { BulkTicketTab } from '@/components/BulkTicketTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpDialog } from '@/components/HelpDialog';
@@ -52,6 +53,12 @@ const PublicEvent = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Track real-time presence for analytics
+  useRealtimePresence({
+    eventId: eventId,
+    pageUrl: `/e/${eventId}`,
+  });
   const [event, setEvent] = useState<any>(null);
   const [bankDetails, setBankDetails] = useState<any>(null);
   const [claimedTicket, setClaimedTicket] = useState<any>(null);
