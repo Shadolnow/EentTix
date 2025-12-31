@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { getUserFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/components/AuthProvider';
+import { SocialLogin } from '@/components/SocialLogin';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -236,6 +237,12 @@ const Auth = () => {
             {loading ? 'Loading...' : isForgotPassword ? 'Send Reset Link' : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
         </form>
+
+        {/* Social Login - Only show on login/signup, not forgot password */}
+        {!isForgotPassword && (
+          <SocialLogin />
+        )}
+
         <div className="text-center space-y-2">
           {!isForgotPassword && isLogin && (
             <button

@@ -38,6 +38,7 @@ const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BankAccounts = lazy(() => import("./pages/BankAccounts"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MobileSettings = lazy(() => import("./pages/MobileSettings"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const GlobalTickets = lazy(() => import("./pages/GlobalTickets"));
 const AllTicketsPage = lazy(() => import("./pages/AllTicketsPage"));
@@ -72,6 +73,7 @@ const AnimatedRoutes = () => {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<PageTransition><Index /></PageTransition>} />
           <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
+          <Route path="/auth/callback" element={<PageTransition><AuthCallback /></PageTransition>} />
           <Route path="/pricing" element={<PageTransition><Pricing /></PageTransition>} />
           <Route path="/business-signup" element={<PageTransition><BusinessSignup /></PageTransition>} />
           <Route path="/e/:eventId" element={<PageTransition><PublicEvent /></PageTransition>} />
