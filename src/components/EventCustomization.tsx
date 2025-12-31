@@ -8,6 +8,7 @@ import { Plus, Trash2, Upload, Video, Instagram, Facebook, Twitter, Globe, Linke
 import { supabase } from '@/integrations/supabase/safeClient';
 import { toast } from 'sonner';
 import { TicketTiersManager } from './TicketTiersManager';
+import { TableManager } from './TableManager';
 
 interface FAQ {
   question: string;
