@@ -17,7 +17,7 @@ import { RazorpayCheckout } from '@/components/RazorpayCheckout';
 import { downloadICS } from '@/utils/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { SocialProofBanner, CountdownTimer } from '@/components/SocialProof';
+import { SocialProofBanner, CountdownTimer, LiveViewCounter, RecentBookingsTicker, BookingStats } from '@/components/SocialProof';
 import { TrustBadges, RefundPolicy, SecuritySection, Testimonials } from '@/components/TrustSignals';
 import { CheckoutProgress } from '@/components/CheckoutProgress';
 import { PromoCodeInput, PriceDisplay } from '@/components/PromoCode';
@@ -34,6 +34,7 @@ import { HelpDialog } from '@/components/HelpDialog';
 import { HowItWorks } from '@/components/HowItWorks';
 import { PartyBackground, PartyHeader, PartyCard, PartyButton } from '@/components/PartyElements';
 import { celebrateTicketBookingQuick } from '@/utils/celebrationEffects';
+import { GuestCheckoutForm, AccountCreationPrompt } from '@/components/GuestCheckout';
 
 interface SelectedTier {
   id: string;
@@ -622,6 +623,16 @@ const PublicEvent = () => {
               title={event.title}
               subtitle={format(new Date(event.event_date), 'PPP p')}
             />
+
+            {/* Social Proof - New! */}
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              <LiveViewCounter eventId={event.id} />
+              <BookingStats eventId={event.id} />
+            </div>
+
+            <div className="mt-3">
+              <RecentBookingsTicker eventId={event.id} />
+            </div>
           </div>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap gap-6 text-sm">
